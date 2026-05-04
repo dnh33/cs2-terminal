@@ -1,0 +1,62 @@
+name = "cs2-steam-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# nodejs_compat is needed because @openrouter/sdk pulls in zod, which uses
+# a few Node-style imports that the standard Workers runtime doesn't expose.
+compatibility_flags = ["nodejs_compat"]
+
+# CORS allow-origin. "*" for development; lock to your Netlify URL in production.
+[vars]
+ALLOWED_ORIGIN = "*"
+
+# Rate-limit-friendly settings tuned for Steam Market.
+# Steam's unofficial market endpoints rate-limit around 20 req/min per IP.
+# 4-second spacing × 40 cases = ~160s per full sweep, well within budget.
+STEAM_REQUEST_SPACING_MS = "4000"
+
+# OpenRouter model selection. Per-request override possible via the /chat body.
+# Browse models at https://openrouter.ai/models — recommended starters:
+#   anthropic/claude-sonnet-4.5    (default, balanced for analytical writing)
+#   anthropic/claude-opus-4.5      (highest quality, more expensive)
+#   openai/gpt-5                   (alternative top-tier)
+#   google/gemini-2.5-pro          (strong on long context)
+#   deepseek/deepseek-chat-v3      (~10× cheaper, surprisingly capable)
+OPENROUTER_MODEL = "anthropic/claude-sonnet-4.5"
+
+# Embedding model — used by /embeddings for sqlite-vec / semantic search.
+# Browse: https://openrouter.ai/models?fmt=cards&output_modalities=embeddings
+#   openai/text-embedding-3-small  (1536 dim, fast, cheap, default)
+#   openai/text-embedding-3-large  (3072 dim, higher quality)
+#   qwen/qwen3-embedding-0.6b      (small, multilingual)
+OPENROUTER_EMBEDDING_MODEL = "openai/text-embedding-3-small"
+
+# Optional attribution — shows your app on https://openrouter.ai/rankings
+# Set OPENROUTER_APP_URL to your deployed Netlify URL after first deploy.
+OPENROUTER_APP_NAME = "CS2 Case Terminal"
+OPENROUTER_APP_URL = ""
+
+# D1 database. Create with:
+#   wrangler d1 create cs2-prices
+# Paste the database_id from the output below.
+[[d1_databases]]
+binding       = "DB"
+database_name = "cs2-prices"
+database_id   = "REPLACE_WITH_D1_DATABASE_ID"
+
+# Cron schedule. Default: every hour at :05 (avoids exact-hour rush).
+# Change here and redeploy to adjust frequency.
+#
+# Common patterns:
+#   "*/30 * * * *"   every 30 minutes  (1,920 writes/day on free tier)
+#   "5 * * * *"      every hour at :05 (960 writes/day) ← default
+#   "5 */3 * * *"    every 3 hours
+#   "5 */6 * * *"    every 6 hours
+#   "5 */12 * * *"   every 12 hours
+[triggers]
+crons = ["5 * * * *"]
+
+# Secrets (set via `wrangler secret put <NAME>`):
+#   OPENROUTER_API_KEY   — required; get one at https://openrouter.ai/keys
+#   ADMIN_TOKEN          — gates /admin/* endpoints; pick any random string
+#   STEAM_LOGIN_COOKIE   — optional; enables /admin/backfill for historical data import

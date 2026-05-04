@@ -1,0 +1,73 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# WORKER LOCAL DEV VARIABLES — copy to .dev.vars (gitignored).
+# ─────────────────────────────────────────────────────────────────────────────
+# This file is for `wrangler dev` only. In production, set these via:
+#     wrangler secret put <NAME>
+# which stores them encrypted in Cloudflare's secret store, never on disk.
+#
+# The non-secret config (model name, app metadata, cron, CORS) lives in
+# wrangler.toml under [vars] / [triggers]. Don't duplicate those here.
+
+# ─── REQUIRED SECRETS ────────────────────────────────────────────────────────
+
+# OpenRouter API key. Get one at https://openrouter.ai/keys.
+# Add credits at https://openrouter.ai/settings/credits — pay per use, no sub.
+OPENROUTER_API_KEY=sk-or-v1-...
+
+# Random token that gates every /admin/* endpoint. Pick anything hard to guess.
+# Generate with: openssl rand -hex 32
+ADMIN_TOKEN=replace-me-with-a-random-string
+
+# ─── OPTIONAL SECRETS ────────────────────────────────────────────────────────
+
+# Password gate. If both are set, the entire app is locked behind a shared
+# password. If unset, all endpoints are public. Generate with the bundled
+# tools/hash-password.html (open it locally in your browser).
+#   AUTH_PASSWORD_HASH:   PBKDF2 hash of your password (200K iterations)
+#                         Format: <iterations>.<salt_b64>.<hash_b64>
+#   AUTH_SESSION_SECRET:  Random 32+ char string used to sign session tokens
+# AUTH_PASSWORD_HASH=200000.aBcD....=.eFgH....=
+# AUTH_SESSION_SECRET=your-random-32-char-or-longer-string
+
+# Steam login cookie — only required if you want to use /admin/backfill to
+# pull historical price data from Steam's pricehistory endpoint.
+# To extract: log into steamcommunity.com → DevTools (F12) → Application →
+# Cookies → https://steamcommunity.com → find "steamLoginSecure" → copy Value.
+# Cookie expires roughly every 30 days; re-extract when /admin/backfill
+# starts returning auth_failed=true.
+# STEAM_LOGIN_COOKIE=76561198...||eyJ0eX...
+
+# ─── REFERENCE: NON-SECRET VARS LIVE IN wrangler.toml ────────────────────────
+#
+# [vars]                                  ← edit there, not here
+# ALLOWED_ORIGIN              CORS allow-origin. "*" for dev, lock to your
+#                             Netlify URL in production.
+# STEAM_REQUEST_SPACING_MS    Spacing between Steam requests during a sweep.
+#                             Default 4000ms. Steam rate-limits ~20/min.
+# OPENROUTER_MODEL            Default chat model. Browse:
+#                             https://openrouter.ai/models
+#                             Examples:
+#                               anthropic/claude-sonnet-4.5    (default)
+#                               anthropic/claude-opus-4.5      (top quality)
+#                               openai/gpt-5
+#                               google/gemini-2.5-pro          (long context)
+#                               deepseek/deepseek-chat-v3      (~10× cheaper)
+# OPENROUTER_EMBEDDING_MODEL  Default embedding model. Browse:
+#                             https://openrouter.ai/models?fmt=cards&output_modalities=embeddings
+#                             Examples:
+#                               openai/text-embedding-3-small  (1536 dim)
+#                               openai/text-embedding-3-large  (3072 dim)
+#                               qwen/qwen3-embedding-0.6b      (multilingual)
+# OPENROUTER_APP_NAME         Shown on https://openrouter.ai/rankings.
+# OPENROUTER_APP_URL          Optional — set to your Netlify URL after deploy.
+#
+# [triggers]
+# crons = ["5 * * * *"]       Default hourly at :05. Other patterns in README.
+#
+# [[d1_databases]]
+# database_id                 Set by `wrangler d1 create cs2-prices`.
+#
+# Per-request overrides also exist in /chat body params:
+#   max_completion_tokens, temperature, top_p, seed, stop, response_format,
+#   verbosity (low|medium|high|xhigh|max), stream, cache_system_prompt,
+#   cache_response_ttl. Frontend sets these — see src/lib/api.ts.
