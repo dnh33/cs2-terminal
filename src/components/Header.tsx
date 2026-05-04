@@ -12,8 +12,8 @@ function Logo() {
         <path d="M9 14 L13 18 L19 10" stroke={C.cyan} strokeWidth="2" fill="none" strokeLinecap="square" />
       </svg>
       <div>
-        <div className="font-display text-[20px] tracking-[0.12em] leading-none text-ink-0">CASE TERMINAL</div>
-        <div className="text-[9px] tracking-[0.2em] text-ink-2 mt-0.5">CS2 / MARKET INTELLIGENCE / v1.0</div>
+        <h1 className="font-display text-[20px] tracking-[0.12em] leading-none text-ink-0 m-0">CASE TERMINAL</h1>
+        <p className="text-[9px] tracking-[0.2em] text-ink-2 mt-0.5 m-0">CS2 / MARKET INTELLIGENCE / v1.0</p>
       </div>
     </div>
   )

@@ -19,7 +19,7 @@ export function StatusDot({ color = C.green, pulse = false }: { color?: string; 
 
 export function PoolBadge({ pool }: { pool: Pool }) {
   const cfg = {
-    active:       { color: C.t2,     label: 'ACTIVE', bg: 'transparent' },
+    active:       { color: C.green,  label: 'ACTIVE', bg: 'rgba(74,222,128,0.08)' },
     rare:         { color: C.cyan,   label: 'RARE',   bg: 'rgba(79,209,197,0.08)' },
     discontinued: { color: C.orange, label: 'DISC',   bg: 'rgba(255,116,33,0.1)' },
   }[pool]

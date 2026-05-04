@@ -16,7 +16,9 @@ import {
   ANALYST_SYSTEM,
   checkAuth,
   logout,
+  fetchMovers,
 } from './lib/api'
+import type { PricePoint } from './lib/metrics'
 import { C } from './lib/theme'
 
 function sortValue(item: ItemFull, key: SortState['key']): number | string | undefined {
@@ -117,6 +119,40 @@ interface DashboardProps {
   onLogout: () => void
 }
 
+/**
+ * Build a compact time-series block for one case. Downsamples to ≤30 points
+ * so token spend stays bounded even with months of daily snapshots.
+ * Format: ISO-date | $price (one per line, oldest first).
+ */
+function formatHistoryBlock(history: PricePoint[]): string {
+  if (!history || history.length === 0) {
+    return '(no real time-series available yet — this case only has ≤1 D1 snapshot)'
+  }
+  const target = 30
+  const step = Math.max(1, Math.ceil(history.length / target))
+  const sampled = history.filter((_, i) => i % step === 0 || i === history.length - 1)
+  return sampled.map(p => `${p.date} | $${p.price.toFixed(2)}`).join('\n')
+}
+
+/**
+ * Build a compact "% change windows" table for the whole universe by merging
+ * the 7d/30d/90d mover snapshots. Cases that didn't accumulate enough history
+ * in a window are shown as "—" for that column. Claude is told explicitly not
+ * to invent trends for cases that don't appear.
+ */
+interface MoverLite { name: string; pct_change: number }
+function formatDeltaTable(m7: MoverLite[], m30: MoverLite[], m90: MoverLite[]): string {
+  const merged = new Map<string, { d7?: number; d30?: number; d90?: number }>()
+  for (const r of m7)  (merged.get(r.name) || merged.set(r.name, {}).get(r.name)!).d7  = r.pct_change
+  for (const r of m30) (merged.get(r.name) || merged.set(r.name, {}).get(r.name)!).d30 = r.pct_change
+  for (const r of m90) (merged.get(r.name) || merged.set(r.name, {}).get(r.name)!).d90 = r.pct_change
+  if (merged.size === 0) return '(no time-series Δ available yet — D1 needs ≥2 snapshots per case)'
+  const fmt = (v: number | undefined) => v == null ? '   —  ' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
+  const lines = ['name | 7d | 30d | 90d']
+  for (const [name, d] of merged) lines.push(`${name} | ${fmt(d.d7)} | ${fmt(d.d30)} | ${fmt(d.d90)}`)
+  return lines.join('\n')
+}
+
 function AppDashboard({ onLogout }: DashboardProps) {
   const { items, fetching, lastUpdated, fetchError, stats, fetchAll, loadDemo, loadRealHistory } = useMarketData()
 
@@ -181,7 +217,11 @@ function AppDashboard({ onLogout }: DashboardProps) {
     setAnalysisError(null)
     setAnalysis(null)
     try {
+      const realHistory = (selected.history || []).filter(h => h.source === 'real')
+      const historyBlock = formatHistoryBlock(realHistory)
       const userMsg = `Analyze this case as an investment thesis. Cover: valuation read, supply/demand from pool status, comparable cases in the dataset, key risks, and a directional view (LONG / FLAT / SHORT-AVOID).
+
+When citing trajectory or trend, use ONLY the time-series block below if it has data. If the time-series is sparse or absent, say so plainly — do not fabricate trends.
 
 FOCUS: ${selected.name}
 Pool: ${selected.pool}
@@ -189,7 +229,10 @@ Released: ${selected.released} (${selected.metrics.ageYears.toFixed(1)}y old)
 Lowest: $${selected.price.lowest.toFixed(2)} | Median: $${(selected.price.median || 0).toFixed(2)}
 Volume: ${selected.price.volume}
 Notable: ${selected.notable}
-Special items: ${selected.rare}${selected.hasGloves ? ' (incl. gloves)' : ''}`
+Special items: ${selected.rare}${selected.hasGloves ? ' (incl. gloves)' : ''}
+
+=== TIME SERIES (real D1 snapshots, this case only) ===
+${historyBlock}`
       const reply = await callClaude({
         messages: [{ role: 'user', content: userMsg }],
         system: ANALYST_SYSTEM + '\n\n=== FULL MARKET CONTEXT ===\n' + marketContext,
@@ -210,6 +253,16 @@ Special items: ${selected.rare}${selected.hasGloves ? ' (incl. gloves)' : ''}`
     setScanError(null)
     setScan(null)
     try {
+      // Pull % change windows for the whole universe in parallel — gives Claude
+      // real time-series signal instead of just "current snapshot" cross-section.
+      // Cases with <2 snapshots in a window simply won't appear, that's expected.
+      const [m7, m30, m90] = await Promise.all([
+        fetchMovers(7).catch(() => []),
+        fetchMovers(30).catch(() => []),
+        fetchMovers(90).catch(() => []),
+      ])
+      const deltaContext = formatDeltaTable(m7, m30, m90)
+      const enhancedContext = marketContext + '\n\n=== % CHANGE WINDOWS (real Δ from D1) ===\n' + deltaContext
       const userMsg = `Run a full market scan. Produce these sections in order:
 
 // EXECUTIVE READ
@@ -227,10 +280,12 @@ One non-obvious pattern or mispricing in this dataset.
 // CAPITAL ALLOCATION
 If $500 to deploy across this universe today, how would you split it? Specific $ amounts and case names.
 
-End with one brief disclaimer line.`
+End with one brief disclaimer line.
+
+When citing momentum, trends, or "movers", use ONLY the % change windows table below. Cases not in the table simply lack the snapshots — never invent trends for them.`
       const reply = await callClaude({
         messages: [{ role: 'user', content: userMsg }],
-        system: ANALYST_SYSTEM + '\n\n=== FULL MARKET CONTEXT ===\n' + marketContext,
+        system: ANALYST_SYSTEM + '\n\n=== FULL MARKET CONTEXT ===\n' + enhancedContext,
         cache_system_prompt: true,
         // Market Scan output is identical for identical inputs — cache for 5 min.
         // If a user spams the button, hits 2..N are completely free.

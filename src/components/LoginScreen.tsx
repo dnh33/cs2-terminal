@@ -140,7 +140,7 @@ export function LoginScreen({ onSuccess }: Props) {
             </div>
             <div className="flex justify-between mt-1">
               <span>HASH</span>
-              <span>PBKDF2 / SHA-256 / 200K</span>
+              <span>PBKDF2 / SHA-256 / 100K</span>
             </div>
           </div>
         </form>

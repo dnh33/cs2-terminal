@@ -48,10 +48,10 @@ export function DetailPanel({ item, onAnalyze, analysis, analyzing, error }: Pro
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-[9px] tracking-[0.2em] text-ink-2 mb-1.5">// SELECTED INSTRUMENT</div>
-            <div className="font-display text-[28px] tracking-[0.02em] leading-none text-ink-0">
+            <p className="text-[9px] tracking-[0.2em] text-ink-2 mb-1.5 m-0">// SELECTED INSTRUMENT</p>
+            <h2 className="font-display text-[28px] tracking-[0.02em] leading-none text-ink-0 m-0">
               {item.name.toUpperCase()}
-            </div>
+            </h2>
             <div className="text-[11px] text-ink-2 mt-1.5">{item.notable}</div>
           </div>
           <div className="flex flex-col items-end gap-1.5">
@@ -85,7 +85,7 @@ export function DetailPanel({ item, onAnalyze, analysis, analyzing, error }: Pro
 
       <div className="px-5 py-4 border-b border-line">
         <div className="flex justify-between items-center mb-3">
-          <span className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold">// PRICE TRAJECTORY</span>
+          <h3 className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold m-0">// PRICE TRAJECTORY</h3>
           <span className="text-[9px] text-ink-3">
             {item.history.some(h => h.source === 'real') ? 'real history from worker' : 'modeled from current px'}
           </span>
@@ -95,7 +95,7 @@ export function DetailPanel({ item, onAnalyze, analysis, analyzing, error }: Pro
 
       {m && (
         <div className="px-5 py-4 border-b border-line">
-          <div className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold mb-3">// SIGNALS</div>
+          <h3 className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold mb-3 m-0">// SIGNALS</h3>
           <MetricBar label="LIQUIDITY" value={m.liquidity} color={C.cyan} />
           <MetricBar label="SCARCITY (POOL × AGE)" value={m.scarcity} color={C.orange} />
           <MetricBar label="POOL APPRECIATION BIAS" value={m.poolMul * 100} color={C.purple} />
@@ -105,7 +105,7 @@ export function DetailPanel({ item, onAnalyze, analysis, analyzing, error }: Pro
 
       <div className="px-5 py-4">
         <div className="flex justify-between items-center mb-3">
-          <span className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold">// LLM-NATIVE THESIS</span>
+          <h3 className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold m-0">// LLM-NATIVE THESIS</h3>
           <button
             onClick={onAnalyze}
             disabled={analyzing}

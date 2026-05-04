@@ -42,7 +42,7 @@ OPENROUTER_APP_URL = ""
 [[d1_databases]]
 binding       = "DB"
 database_name = "cs2-prices"
-database_id   = "REPLACE_WITH_D1_DATABASE_ID"
+database_id   = "REPLACE-WITH-YOUR-D1-DATABASE-ID"
 
 # Cron schedule. Default: every hour at :05 (avoids exact-hour rush).
 # Change here and redeploy to adjust frequency.

@@ -1131,15 +1131,36 @@ export default {
         }
       }
 
-      // Admin: trigger full sweep on-demand (gated by token)
+      // Admin: synchronous batched sweep. Workers' waitUntil() only gets ~30s of
+      // post-invocation runtime on workers.dev, so a 41-case sweep (164s+) gets
+      // killed mid-run. Instead we sweep ?limit= cases per call (default 5,
+      // ~20s wall time @ 4s spacing), return progress, and let the caller poll.
+      // The hourly cron handler has a 15-min budget and can do the full sweep
+      // in one go — this endpoint is just for "I want data NOW" usage.
       if (url.pathname === '/admin/snapshot-now' && request.method === 'POST') {
         const provided = request.headers.get('x-admin-token')
         if (!env.ADMIN_TOKEN || provided !== env.ADMIN_TOKEN) {
           return jsonResponse({ error: 'unauthorized' }, env, 401)
         }
-        // Run sweep in background — returns immediately so client doesn't time out
-        ctx.waitUntil(runSweepWithLog(env, 'admin'))
-        return jsonResponse({ accepted: true, message: 'sweep started in background' }, env)
+        const limit = Math.min(8, Math.max(1, parseInt(url.searchParams.get('limit') || '5', 10) || 5))
+        const stale = await getStaleCases(env)
+        if (stale.length === 0) {
+          return jsonResponse({ done: true, processed: 0, succeeded: 0, failed: 0, remaining_stale: 0, message: 'all cases fresh' }, env)
+        }
+        const batch = stale.slice(0, limit)
+        const result = await sweep(env, { caseFilter: batch, spacingMs: 4000 })
+        const remaining = stale.length - batch.length
+        return jsonResponse({
+          done: remaining === 0,
+          processed: batch.length,
+          succeeded: result.succeeded,
+          failed: result.failed,
+          remaining_stale: remaining,
+          rate_limited: result.rateLimited,
+          message: remaining === 0
+            ? `swept ${batch.length} cases — all stale cases now covered`
+            : `swept ${batch.length} cases, ${remaining} still stale — call again to continue`,
+        }, env)
       }
 
       // Admin: backfill historical data via Steam pricehistory (requires login cookie)

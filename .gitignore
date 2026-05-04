@@ -12,3 +12,5 @@ worker/.dev.vars
 worker/.dev.vars.local
 .netlify/
 .secrets-do-not-commit
+.claude/
+.playwright-mcp/

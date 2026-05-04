@@ -93,7 +93,7 @@ export function CaseTable({ items, selectedId, onSelect, sort, setSort, filter, 
     <div className="bg-bg-1 border border-line">
       <div className="flex items-center justify-between px-4 py-3 border-b border-line bg-bg-2">
         <div className="flex items-center gap-3">
-          <span className="text-[11px] tracking-[0.2em] text-ink-1 font-semibold">// MARKET TABLE</span>
+          <h2 className="text-[11px] tracking-[0.2em] text-ink-1 font-semibold m-0">// MARKET TABLE</h2>
           <span className="text-[10px] text-ink-3">{items.length} ROWS</span>
         </div>
         <div className="flex gap-1.5">

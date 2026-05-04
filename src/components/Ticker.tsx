@@ -9,7 +9,7 @@ export interface TickerRow {
 const POOL_COLOR: Record<Pool, string> = {
   discontinued: 'text-accent-orange border-accent-orange',
   rare: 'text-accent-cyan border-accent-cyan',
-  active: 'text-ink-3 border-ink-3',
+  active: 'text-accent-green border-accent-green',
 }
 
 export function Ticker({ rows }: { rows: TickerRow[] }) {

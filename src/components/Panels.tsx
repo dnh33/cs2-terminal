@@ -19,10 +19,10 @@ export function MarketScanPanel({ items, onScan, scan, scanning, error }: ScanPr
     <div className="bg-bg-1 border border-line px-5 py-4 mb-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <div className="font-display text-[22px] tracking-[0.05em] text-ink-0 leading-none">MARKET SCAN</div>
-          <div className="text-[10px] tracking-[0.15em] text-ink-2 mt-1">
+          <h2 className="font-display text-[22px] tracking-[0.05em] text-ink-0 leading-none m-0">MARKET SCAN</h2>
+          <p className="text-[10px] tracking-[0.15em] text-ink-2 mt-1 m-0">
             // LLM-NATIVE TOP-DOWN ANALYSIS OF TRACKED UNIVERSE
-          </div>
+          </p>
         </div>
         <button
           onClick={onScan}
@@ -99,15 +99,15 @@ export function ChatPanel({ marketContext }: ChatProps) {
     <div className="bg-bg-1 border border-line flex flex-col h-[580px]">
       <div className="px-5 py-3.5 border-b border-line bg-bg-2 flex justify-between items-center">
         <div>
-          <div className="font-display text-[18px] tracking-[0.05em] text-ink-0 leading-none">ANALYST CHAT</div>
-          <div className="text-[9px] tracking-[0.2em] text-ink-2 mt-1">// QUERY DATASET IN NATURAL LANGUAGE</div>
+          <h2 className="font-display text-[18px] tracking-[0.05em] text-ink-0 leading-none m-0">ANALYST CHAT</h2>
+          <p className="text-[9px] tracking-[0.2em] text-ink-2 mt-1 m-0">// QUERY DATASET IN NATURAL LANGUAGE</p>
         </div>
         <StatusDot color={busy ? C.orange : C.green} pulse={busy} />
       </div>
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4">
         {messages.length === 0 && (
           <div>
-            <div className="text-[10px] tracking-[0.2em] text-ink-2 mb-3">// SUGGESTED QUERIES</div>
+            <h3 className="text-[10px] tracking-[0.2em] text-ink-2 mb-3 m-0 font-normal">// SUGGESTED QUERIES</h3>
             <div className="flex flex-col gap-1.5">
               {suggestions.map((s, i) => (
                 <button

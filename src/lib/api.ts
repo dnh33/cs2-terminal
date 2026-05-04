@@ -208,8 +208,12 @@ export async function fetchStats(): Promise<MarketStats> {
 export async function refreshStale(): Promise<{ refreshed: number; failed?: number; attempted?: number; remaining?: number; message?: string; freshDeploy?: boolean }> {
   const res = await fetch(`${WORKER_URL}/refresh`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
   })
+  if (res.status === 401) {
+    handleAuthExpired()
+    throw new AuthRequiredError()
+  }
   const data = await res.json()
   // 503 = "too many stale, run admin snapshot" — we surface this distinctly
   if (res.status === 503) return { ...data, freshDeploy: true }
