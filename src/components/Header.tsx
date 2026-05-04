@@ -6,13 +6,18 @@ import type { MarketStats } from '../lib/api'
 function Logo() {
   return (
     <div className="flex items-center gap-2.5">
-      <svg width="28" height="28" viewBox="0 0 28 28">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+        <rect x="2" y="2" width="24" height="24" fill={C.orange} opacity="0.08" />
         <rect x="2" y="2" width="24" height="24" fill="none" stroke={C.orange} strokeWidth="1.5" />
-        <rect x="6" y="6" width="16" height="16" fill={C.orange} opacity="0.15" />
-        <path d="M9 14 L13 18 L19 10" stroke={C.cyan} strokeWidth="2" fill="none" strokeLinecap="square" />
+        <circle cx="14" cy="14" r="6" fill="none" stroke={C.cyan} strokeWidth="1.5" />
+        <line x1="14" y1="2" x2="14" y2="6" stroke={C.cyan} strokeWidth="1.5" />
+        <line x1="14" y1="22" x2="14" y2="26" stroke={C.cyan} strokeWidth="1.5" />
+        <line x1="2" y1="14" x2="6" y2="14" stroke={C.cyan} strokeWidth="1.5" />
+        <line x1="22" y1="14" x2="26" y2="14" stroke={C.cyan} strokeWidth="1.5" />
+        <circle cx="14" cy="14" r="1.6" fill={C.orange} />
       </svg>
       <div>
-        <h1 className="font-display text-[20px] tracking-[0.12em] leading-none text-ink-0 m-0">CASE TERMINAL</h1>
+        <h1 className="font-display text-[20px] tracking-[0.12em] leading-none text-ink-0 m-0">CASE SNIPER</h1>
         <p className="text-[9px] tracking-[0.2em] text-ink-2 mt-0.5 m-0">CS2 / MARKET INTELLIGENCE / v1.0</p>
       </div>
     </div>

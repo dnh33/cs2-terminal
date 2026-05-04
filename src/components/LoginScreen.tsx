@@ -61,7 +61,7 @@ export function LoginScreen({ onSuccess }: Props) {
           className="flex items-center justify-between px-4 py-2 border-b font-mono text-[10px] tracking-[0.2em] uppercase"
           style={{ borderColor: C.line, background: C.bg2 }}
         >
-          <span style={{ color: C.cyan }}>CS2 TERMINAL // SECURE ACCESS</span>
+          <span style={{ color: C.cyan }}>CASE SNIPER // SECURE ACCESS</span>
           <span style={{ color: C.t2 }}>{now.toISOString().slice(11, 19)} UTC</span>
         </div>
 

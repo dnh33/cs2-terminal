@@ -6,9 +6,9 @@ compatibility_date = "2025-01-01"
 # a few Node-style imports that the standard Workers runtime doesn't expose.
 compatibility_flags = ["nodejs_compat"]
 
-# CORS allow-origin. "*" for development; lock to your Netlify URL in production.
+# CORS allow-origin. Locked to the deployed Netlify URL in production.
 [vars]
-ALLOWED_ORIGIN = "*"
+ALLOWED_ORIGIN = "https://your-site.netlify.app"
 
 # Rate-limit-friendly settings tuned for Steam Market.
 # Steam's unofficial market endpoints rate-limit around 20 req/min per IP.
@@ -33,8 +33,8 @@ OPENROUTER_EMBEDDING_MODEL = "openai/text-embedding-3-small"
 
 # Optional attribution — shows your app on https://openrouter.ai/rankings
 # Set OPENROUTER_APP_URL to your deployed Netlify URL after first deploy.
-OPENROUTER_APP_NAME = "CS2 Case Terminal"
-OPENROUTER_APP_URL = ""
+OPENROUTER_APP_NAME = "Case Sniper"
+OPENROUTER_APP_URL = "https://your-site.netlify.app"
 
 # D1 database. Create with:
 #   wrangler d1 create cs2-prices
