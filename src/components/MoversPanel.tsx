@@ -45,7 +45,7 @@ export function MoversPanel({ onSelect }: { onSelect: (id: string) => void }) {
             <button
               key={w.days}
               onClick={() => setDays(w.days)}
-              className={`text-[10px] tracking-[0.15em] px-2 py-0.5 ${
+              className={`text-[10px] tracking-[0.15em] px-3 py-1 min-h-[24px] inline-flex items-center ${
                 days === w.days
                   ? 'border border-accent-orange text-accent-orange bg-accent-orange/10'
                   : 'border border-line-bright text-ink-2 hover:text-ink-1'

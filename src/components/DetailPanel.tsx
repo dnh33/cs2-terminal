@@ -4,15 +4,17 @@ import { PriceChart } from './Charts'
 import { AnalysisOutput } from './AnalysisOutput'
 import type { ItemFull } from './CaseTable'
 
-function MetricBar({ label, value, max = 100, color = C.cyan }: { label: string; value: number; max?: number; color?: string }) {
+function MetricBar({
+  label, value, max = 100, color = C.cyan, tooltip,
+}: { label: string; value: number; max?: number; color?: string; tooltip?: string }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100))
   return (
     <div className="mb-2.5">
       <div className="flex justify-between text-[10px] mb-1">
-        <span className="text-ink-2 tracking-[0.1em]">{label}</span>
+        <span className="text-ink-2 tracking-[0.1em]" title={tooltip}>{label}</span>
         <span className="text-ink-0 font-semibold">{value.toFixed(0)}</span>
       </div>
-      <div className="h-1 bg-bg-3 relative">
+      <div className="h-1 bg-bg-3 relative" aria-hidden="true">
         <div
           className="absolute inset-y-0 left-0"
           style={{ width: `${pct}%`, background: color, boxShadow: `0 0 6px ${color}` }}
@@ -99,7 +101,12 @@ export function DetailPanel({ item, onAnalyze, analysis, analyzing, error }: Pro
           <MetricBar label="LIQUIDITY" value={m.liquidity} color={C.cyan} />
           <MetricBar label="SCARCITY (POOL × AGE)" value={m.scarcity} color={C.orange} />
           <MetricBar label="POOL APPRECIATION BIAS" value={m.poolMul * 100} color={C.purple} />
-          <MetricBar label="SPREAD FRICTION" value={Math.min(m.spreadPct * 5, 100)} color={C.yellow} />
+          <MetricBar
+            label="SPREAD FRICTION"
+            value={Math.max(0, Math.min(m.spreadPct * 5, 100))}
+            color={C.yellow}
+            tooltip={m.spreadPct < 0 ? 'median < lowest — likely illiquid or stale median' : undefined}
+          />
         </div>
       )}
 

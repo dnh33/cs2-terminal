@@ -55,7 +55,10 @@ function CaseRow({ item, idx, selected, onClick }: RowProps) {
         {p ? p.volume.toLocaleString() : '—'}
       </div>
       <div className="text-ink-1">{m ? `${m.ageYears.toFixed(1)}y` : '—'}</div>
-      <MiniSparkline data={item.history?.map(h => h.price)} />
+      <MiniSparkline
+        data={item.history?.map(h => h.price)}
+        modeled={!item.history?.some(h => h.source === 'real')}
+      />
     </KbdRow>
   )
 }
@@ -101,7 +104,7 @@ export function CaseTable({ items, selectedId, onSelect, sort, setSort, filter, 
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`text-[10px] tracking-[0.15em] px-2.5 py-1 ${
+              className={`text-[10px] tracking-[0.15em] px-3 py-1.5 min-h-[28px] inline-flex items-center ${
                 filter === f
                   ? 'border border-accent-orange text-accent-orange bg-accent-orange/10'
                   : 'border border-line-bright text-ink-1 hover:border-ink-2'

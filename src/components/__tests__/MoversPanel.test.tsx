@@ -39,6 +39,14 @@ describe('MoversPanel a11y + keyboard', () => {
     expect(screen.getByRole('row', { name: /chroma case/i })).toBeInTheDocument()
   })
 
+  it('window pills meet ≥24px tap target (WCAG 2.5.8)', async () => {
+    render(<MoversPanel onSelect={() => {}} />)
+    await waitFor(() => screen.getByRole('row', { name: /glove case/i }))
+    const pill = screen.getByRole('button', { name: /^7D$/ })
+    expect(pill.className).toMatch(/min-h-\[24px\]/)
+    expect(pill.className).toMatch(/inline-flex/)
+  })
+
   it('row aria-label encodes direction and price', async () => {
     render(<MoversPanel onSelect={() => {}} />)
     const up = await screen.findByRole('row', { name: /glove case, up 32\.4 percent/i })

@@ -33,18 +33,45 @@ export function PoolBadge({ pool }: { pool: Pool }) {
   )
 }
 
-export function MiniSparkline({ data }: { data: number[] | undefined }) {
-  if (!data || data.length < 2) return <div className="w-20 h-6 bg-bg-2" />
+interface SparkProps {
+  data: number[] | undefined
+  modeled?: boolean
+  windowLabel?: string
+}
+
+export function MiniSparkline({ data, modeled = false, windowLabel = '' }: SparkProps) {
+  if (!data || data.length < 2) return <div className="w-20 h-6 bg-bg-2" aria-hidden="true" />
   const max = Math.max(...data), min = Math.min(...data)
   const range = max - min || 1
   const points = data
     .map((d, i) => `${(i / (data.length - 1)) * 78 + 1},${22 - ((d - min) / range) * 20}`)
     .join(' ')
   const trend = data[data.length - 1] - data[0]
-  const lineColor = trend >= 0 ? C.green : C.red
+  const pct = data[0] !== 0 ? (trend / data[0]) * 100 : 0
+  const trendUp = trend >= 0
+  const lineColor = modeled ? C.modeled : trendUp ? C.green : C.red
+  const ariaPrefix = modeled ? 'Modeled' : 'Real'
+  const dir = trendUp ? 'up' : 'down'
+  const ariaLabel = `${ariaPrefix} ${windowLabel || ''} ${dir} ${Math.abs(pct).toFixed(1)}%`.replace(/\s+/g, ' ').trim()
   return (
-    <svg width="80" height="24" className="block">
-      <polyline points={points} fill="none" stroke={lineColor} strokeWidth="1.2" />
-    </svg>
+    <span className="inline-flex items-center gap-1" aria-label={ariaLabel} role="img">
+      <svg width="80" height="24" className="block" aria-hidden="true">
+        <polyline
+          points={points}
+          fill="none"
+          stroke={lineColor}
+          strokeWidth="1.2"
+          strokeDasharray={modeled ? '4 2' : undefined}
+        />
+      </svg>
+      <span aria-hidden="true" className="text-[9px]" style={{ color: lineColor }}>
+        {trendUp ? '▲' : '▼'}
+      </span>
+      {modeled && (
+        <span aria-hidden="true" className="text-[9px] border px-1" style={{ color: C.modeled, borderColor: C.modeled }}>
+          MODEL
+        </span>
+      )}
+    </span>
   )
 }

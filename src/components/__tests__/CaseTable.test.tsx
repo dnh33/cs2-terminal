@@ -44,6 +44,23 @@ describe('CaseTable a11y + keyboard', () => {
     expect(onSelect).toHaveBeenCalledWith('glove')
   })
 
+  it('filter pills meet ≥24px tap target (WCAG 2.5.8)', () => {
+    render(
+      <CaseTable
+        items={[baseItem]}
+        selectedId={null}
+        onSelect={noop}
+        sort={{ key: 'price', dir: 'desc' }}
+        setSort={noop as any}
+        filter="all"
+        setFilter={noop}
+      />
+    )
+    const pill = screen.getByRole('button', { name: /^DISCONTINUED$/ })
+    expect(pill.className).toMatch(/min-h-\[28px\]/)
+    expect(pill.className).toMatch(/inline-flex/)
+  })
+
   it('sort headers are <button> with aria-sort', () => {
     render(
       <CaseTable
