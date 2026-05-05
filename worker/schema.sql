@@ -30,9 +30,14 @@ CREATE INDEX IF NOT EXISTS idx_snap_time      ON price_snapshots(fetched_at DESC
 -- Observability: every cron run writes one row. Last few rows tell you the
 -- worker's heartbeat at a glance.
 CREATE TABLE IF NOT EXISTS cron_runs (
-  started_at  INTEGER PRIMARY KEY,                                     -- unix seconds
+  started_at  INTEGER NOT NULL,                                     -- unix seconds
+  kind        TEXT NOT NULL DEFAULT 'case'
+              CHECK(kind IN ('case','item_high','item_low')),
   finished_at INTEGER,
   succeeded   INTEGER NOT NULL DEFAULT 0,
   failed      INTEGER NOT NULL DEFAULT 0,
-  error       TEXT
+  error       TEXT,
+  PRIMARY KEY (started_at, kind)
 );
+
+CREATE INDEX IF NOT EXISTS idx_cron_runs_kind_time ON cron_runs(kind, started_at DESC);
