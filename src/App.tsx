@@ -11,6 +11,7 @@ import { PoolDistribution, VolumePriceScatter } from './components/Charts'
 import { MoversPanel } from './components/MoversPanel'
 import { LoginScreen } from './components/LoginScreen'
 import { SkipLink } from './components/primitives/SkipLink'
+import { ErrorBoundary } from './components/primitives/ErrorBoundary'
 import { POOL_RANK } from './lib/cases'
 import {
   callClaude,
@@ -113,7 +114,11 @@ export default function AppGate() {
     return <LoginScreen onSuccess={() => setAuth({ status: 'authenticated' })} />
   }
 
-  return <AppDashboard onLogout={() => { logout(); setAuth({ status: 'login_required' }) }} />
+  return (
+    <ErrorBoundary>
+      <AppDashboard onLogout={() => { logout(); setAuth({ status: 'login_required' }) }} />
+    </ErrorBoundary>
+  )
 }
 
 interface DashboardProps {
