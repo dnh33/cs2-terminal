@@ -60,28 +60,16 @@ export default {
         display: ['Bebas Neue', 'Impact', 'sans-serif'],
       },
       animation: {
-        'pulse-orange': 'pulse-orange 2s infinite',
-        'ticker': 'ticker 80s linear infinite',
+        'pulse-sigil': 'pulse-sigil 2.4s ease-in-out infinite',
+        'ticker-drift': 'ticker-drift var(--ticker-duration, 80s) linear infinite',
         'blink': 'blink 1s steps(2) infinite',
-        'fade-up': 'fade-up 0.4s ease-out',
+        'fade-up': 'fade-up 0.3s ease-out',
+        // Legacy aliases for components not yet migrated (see Task 11.5).
+        'pulse-orange': 'pulse-sigil 2.4s ease-in-out infinite',
+        'ticker': 'ticker-drift var(--ticker-duration, 80s) linear infinite',
       },
       keyframes: {
-        'pulse-orange': {
-          '0%, 100%': { boxShadow: '0 0 0 0 rgba(255,116,33,0.4)' },
-          '50%': { boxShadow: '0 0 0 6px rgba(255,116,33,0)' },
-        },
-        ticker: {
-          from: { transform: 'translateX(0)' },
-          to: { transform: 'translateX(-50%)' },
-        },
-        blink: {
-          '0%, 49%': { opacity: '1' },
-          '50%, 100%': { opacity: '0.3' },
-        },
-        'fade-up': {
-          from: { opacity: '0', transform: 'translateY(8px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
-        },
+        // empty — definitions live in src/index.css so they can use color-mix.
       },
     },
   },

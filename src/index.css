@@ -208,3 +208,40 @@
   .t-label     { font-family: var(--font-mono); font-weight: 500; font-size: var(--text-label); line-height: var(--lh-label); letter-spacing: var(--ls-label); text-transform: uppercase; }
   .t-micro     { font-family: var(--font-mono); font-weight: 400; font-size: var(--text-micro); line-height: var(--lh-micro); letter-spacing: var(--ls-micro); text-transform: uppercase; }
 }
+
+/* === MOTION — reduced-motion handler + global keyframes ===
+   Keyframes live here (not in tailwind.config.js) so color-mix() can
+   resolve --state-info at paint time. Tailwind's `keyframes` plugin
+   serializes values to strings before the browser sees them, which
+   strips var() context. */
+
+@layer base {
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@keyframes pulse-sigil {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--state-info) 60%, transparent); }
+  70%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--state-info) 0%, transparent); }
+}
+
+@keyframes ticker-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+@keyframes blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0.3; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
