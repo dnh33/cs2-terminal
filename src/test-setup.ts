@@ -6,6 +6,14 @@ import { afterEach } from 'vitest'
 
 expect.extend(toHaveNoViolations)
 
+// jsdom does not implement ResizeObserver — Recharts ResponsiveContainer needs it.
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+;(globalThis as any).ResizeObserver = (globalThis as any).ResizeObserver || ResizeObserverMock
+
 afterEach(() => {
   cleanup()
 })

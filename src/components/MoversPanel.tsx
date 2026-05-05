@@ -3,6 +3,7 @@ import { fetchMovers } from '../lib/api'
 import type { MoverRow } from '../lib/api'
 import { PoolBadge } from './Atoms'
 import { C } from '../lib/theme'
+import { KbdRow } from './primitives/KeyboardTable'
 
 const WINDOWS: { label: string; days: number }[] = [
   { label: '24H', days: 1 },
@@ -33,7 +34,7 @@ export function MoversPanel({ onSelect }: { onSelect: (id: string) => void }) {
   const enoughHistory = movers.length > 0
 
   return (
-    <div className="bg-bg-1 border border-line">
+    <div className="bg-bg-1 border border-line" role="grid" aria-label="Top movers">
       <div className="flex items-center justify-between px-4 py-3 border-b border-line bg-bg-2">
         <div>
           <span className="text-[11px] tracking-[0.2em] text-ink-1 font-semibold">// TOP MOVERS</span>
@@ -69,7 +70,7 @@ export function MoversPanel({ onSelect }: { onSelect: (id: string) => void }) {
         </div>
       )}
       {!loading && !error && enoughHistory && (
-        <div className="grid grid-cols-2 divide-x divide-line">
+        <div className="grid grid-cols-2 divide-x divide-line" role="rowgroup">
           <MoverList title="GAINERS" rows={gainers} accent={C.green} onSelect={onSelect} />
           <MoverList title="LOSERS"  rows={losers}  accent={C.red}   onSelect={onSelect} />
         </div>
@@ -90,9 +91,11 @@ function MoverList({
         <div className="p-4 text-[11px] text-ink-3 tracking-[0.1em]">// none in window</div>
       ) : (
         rows.map(r => (
-          <div
+          <KbdRow
             key={r.id}
-            onClick={() => onSelect(r.id)}
+            onActivate={() => onSelect(r.id)}
+            selected={false}
+            aria-label={`${r.name}, ${r.pct_change > 0 ? 'up' : 'down'} ${Math.abs(r.pct_change).toFixed(1)} percent, $${r.last_price.toFixed(2)}`}
             className="flex items-center justify-between px-4 py-2 border-b border-line hover:bg-white/[0.02] cursor-pointer"
           >
             <div className="flex items-center gap-2 min-w-0">
@@ -105,7 +108,7 @@ function MoverList({
             <div className="font-display text-[18px] shrink-0" style={{ color: accent }}>
               {r.pct_change > 0 ? '+' : ''}{r.pct_change.toFixed(1)}%
             </div>
-          </div>
+          </KbdRow>
         ))
       )}
     </div>
