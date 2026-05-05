@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { C } from '../lib/theme'
 import { StatusDot } from './Atoms'
+import { LiveRegion } from './primitives/LiveRegion'
 import type { MarketStats } from '../lib/api'
 
 function Logo() {
@@ -61,7 +62,9 @@ export function Header({ fetching, stats, onLogout }: Props) {
         <div className="flex items-center gap-2">
           <StatusDot color={feedColor} pulse={fetching} />
           <span className="text-ink-2 tracking-[0.1em] text-[10px]">FEED</span>
-          <span style={{ color: feedColor }}>{feedLabel}</span>
+          <LiveRegion politeness="polite">
+            <span style={{ color: feedColor }}>{feedLabel}</span>
+          </LiveRegion>
         </div>
         <div className="text-ink-3">|</div>
         <div className="flex items-center gap-1.5">
