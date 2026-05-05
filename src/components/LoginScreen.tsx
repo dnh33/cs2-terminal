@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react'
+import { useState, useEffect, useRef, FormEvent, KeyboardEvent } from 'react'
 import { login } from '../lib/api'
 import { C } from '../lib/theme'
 
@@ -16,11 +16,17 @@ export function LoginScreen({ onSuccess }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [now, setNow] = useState(new Date())
+  const [capsOn, setCapsOn] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(id)
   }, [])
+
+  function checkCaps(e: KeyboardEvent<HTMLInputElement>) {
+    setCapsOn(e.getModifierState('CapsLock'))
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -35,6 +41,8 @@ export function LoginScreen({ onSuccess }: Props) {
       setBusy(false)
     }
   }
+
+  const describedBy = error ? 'pw-err' : capsOn ? 'pw-caps' : undefined
 
   return (
     <div
@@ -88,12 +96,18 @@ export function LoginScreen({ onSuccess }: Props) {
             </label>
             <input
               id="pw"
+              ref={inputRef}
               type="password"
+              required
               autoComplete="current-password"
               autoFocus
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={checkCaps}
+              onKeyUp={checkCaps}
               disabled={busy}
+              aria-invalid={error ? true : false}
+              aria-describedby={describedBy}
               className="w-full px-3 py-3 font-mono text-sm outline-none border focus:border-current"
               style={{
                 background: C.bg0,
@@ -102,10 +116,21 @@ export function LoginScreen({ onSuccess }: Props) {
                 caretColor: C.cyan,
               }}
             />
+            {capsOn && !error && (
+              <div
+                id="pw-caps"
+                className="mt-2 font-mono text-[10px] tracking-[0.2em] uppercase"
+                style={{ color: C.yellow }}
+              >
+                ⇪ CAPS LOCK IS ON
+              </div>
+            )}
           </div>
 
           {error && (
             <div
+              id="pw-err"
+              role="alert"
               className="text-xs font-mono px-3 py-2 border-l-2"
               style={{
                 color: C.red,
@@ -120,6 +145,7 @@ export function LoginScreen({ onSuccess }: Props) {
           <button
             type="submit"
             disabled={!password || busy}
+            data-variant="primary"
             className="w-full py-3 font-mono text-xs tracking-[0.2em] uppercase font-bold transition-colors"
             style={{
               background: busy || !password ? C.bg3 : C.cyan,
