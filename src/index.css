@@ -184,6 +184,32 @@
   input, select, textarea, button {
     font-family: var(--font-mono);
   }
+
+  /* === FOCUS RING (WCAG 2.4.7 Level AA) ===
+     Strip the default outline so we can replace it with a token-driven
+     ring that respects the active palette. Keyboard-only via
+     :focus-visible — pointer focus stays quiet. */
+  :focus { outline: none; }
+
+  :focus-visible {
+    outline: 2px solid var(--accent-sel);
+    outline-offset: 2px;
+  }
+
+  /* Inverse ring for accent-filled surfaces (primary buttons, on-accent
+     contexts) where --accent-sel would blend into the background. */
+  [data-on-accent] :focus-visible,
+  .on-accent :focus-visible,
+  [data-variant="primary"]:focus-visible {
+    outline-color: var(--focus-inverse);
+  }
+
+  /* Inset variant for elements clipped by a scroll/overflow container —
+     swap the outer outline for an inset box-shadow ring. */
+  [data-focus="inset"]:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--accent-sel);
+  }
 }
 
 @layer utilities {
