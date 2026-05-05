@@ -22,6 +22,7 @@ import {
   fetchMovers,
 } from './lib/api'
 import type { PricePoint } from './lib/metrics'
+import { saveAnalysis, loadAnalysis, saveScan, loadLastScan } from './lib/persist'
 import { C } from './lib/theme'
 
 function sortValue(item: ItemFull, key: SortState['key']): number | string | undefined {
@@ -187,6 +188,13 @@ function AppDashboard({ onLogout }: DashboardProps) {
     setAnalysisError(null)
   }, [selectedId])
 
+  // Hydrate the scan panel from localStorage on mount so refreshes don't wipe
+  // the last market scan a user generated. Errors are swallowed inside persist.
+  useEffect(() => {
+    const last = loadLastScan()
+    if (last) setScan(last.text)
+  }, [])
+
   const filteredSorted = useMemo(() => {
     let arr = [...items]
     if (filter !== 'all') arr = arr.filter(i => i.pool === filter)
@@ -222,6 +230,16 @@ function AppDashboard({ onLogout }: DashboardProps) {
     if (!selected || !selected.price || !selected.metrics) return
     setAnalyzing(true)
     setAnalysisError(null)
+    // Cache hit short-circuit: if we've already paid for this exact analysis
+    // (same case + same worker snapshot timestamp), serve from localStorage
+    // and skip the LLM stream entirely.
+    const snapshotKey = stats?.last_snapshot_at ?? 0
+    const cached = loadAnalysis(selected.id, snapshotKey)
+    if (cached) {
+      setAnalysis(cached)
+      setAnalyzing(false)
+      return
+    }
     setAnalysis('')
     try {
       const realHistory = (selected.history || []).filter(h => h.source === 'real')
@@ -254,6 +272,8 @@ ${historyBlock}`
           setAnalysis(full)
         },
       )
+      // Only persist successful streams. Errors thrown above skip this.
+      saveAnalysis(selected.id, snapshotKey, full)
     } catch (e: any) {
       setAnalysisError(e.message)
     } finally {
@@ -311,6 +331,8 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
           setScan(full)
         },
       )
+      // Persist last successful scan so refresh doesn't wipe expensive output.
+      saveScan(full)
     } catch (e: any) {
       setScanError(e.message)
     } finally {
