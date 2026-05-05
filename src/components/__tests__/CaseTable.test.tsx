@@ -61,6 +61,25 @@ describe('CaseTable a11y + keyboard', () => {
     expect(pill.className).toMatch(/inline-flex/)
   })
 
+  it('renders 8 skeleton rows when loading and no items', () => {
+    const { container } = render(
+      <CaseTable
+        items={[]}
+        selectedId={null}
+        onSelect={noop}
+        sort={{ key: 'price', dir: 'desc' }}
+        setSort={noop as any}
+        filter="all"
+        setFilter={noop}
+        loading
+      />
+    )
+    const placeholders = container.querySelectorAll('[aria-hidden="true"]')
+    expect(placeholders.length).toBeGreaterThanOrEqual(8)
+    const busy = container.querySelector('[aria-busy="true"]')
+    expect(busy).not.toBeNull()
+  })
+
   it('sort headers are <button> with aria-sort', () => {
     render(
       <CaseTable

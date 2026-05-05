@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { callClaude, ANALYST_SYSTEM } from '../lib/api'
 import { AnalysisOutput } from './AnalysisOutput'
 import { StatusDot } from './Atoms'
+import { Banner } from './primitives/Banner'
 import { C } from '../lib/theme'
 import type { ItemFull } from './CaseTable'
 
@@ -36,11 +37,7 @@ export function MarketScanPanel({ items, onScan, scan, scanning, error }: ScanPr
           {scanning ? '◌ SCANNING...' : '▸ RUN FULL SCAN'}
         </button>
       </div>
-      {error && (
-        <div className="text-[11px] text-state-err p-2.5 border border-state-err bg-state-err/5 mb-3">
-          ERR: {error}
-        </div>
-      )}
+      {error && <Banner variant="error" className="mb-3">{error}</Banner>}
       {scan ? (
         <AnalysisOutput text={scan} />
       ) : !scanning ? (

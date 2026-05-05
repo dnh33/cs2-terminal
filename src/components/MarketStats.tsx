@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { CASE_DB } from '../lib/cases'
 import type { CaseRecord } from '../lib/cases'
 import type { PriceData } from '../lib/metrics'
+import { Skeleton } from './primitives/Skeleton'
 
 export interface ItemWithPrice extends CaseRecord {
   price: PriceData | null
@@ -44,7 +45,23 @@ export function MarketStats({ items }: { items: ItemWithPrice[] }) {
     }
   }, [items])
 
-  if (!stats) return null
+  if (!stats) {
+    return (
+      <div
+        className="border-b border-line bg-bg-1 flex flex-wrap"
+        aria-busy="true"
+        aria-label="Loading market stats"
+      >
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="px-4 py-3.5 border-r border-line flex-1 min-w-[140px]">
+            <Skeleton width="60%" height={9} className="mb-1.5" />
+            <Skeleton width="80%" height={28} />
+            <Skeleton width="40%" height={9} className="mt-1.5" />
+          </div>
+        ))}
+      </div>
+    )
+  }
   return (
     <div className="border-b border-line bg-bg-1 flex flex-wrap">
       <StatBlock label="CASES TRACKED" value={stats.tracked} sub={`of ${CASE_DB.length} in DB`} />

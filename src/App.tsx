@@ -12,6 +12,7 @@ import { MoversPanel } from './components/MoversPanel'
 import { LoginScreen } from './components/LoginScreen'
 import { SkipLink } from './components/primitives/SkipLink'
 import { ErrorBoundary } from './components/primitives/ErrorBoundary'
+import { Banner } from './components/primitives/Banner'
 import { POOL_RANK } from './lib/cases'
 import {
   callClaude,
@@ -361,9 +362,13 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
               </button>
             </div>
             {fetchError && (
-              <div className="mt-5 p-3 text-[11px] text-state-err border border-state-err bg-state-err/5 text-left">
-                ERR: {fetchError}
-              </div>
+              <Banner
+                variant="error"
+                className="mt-5"
+                action={{ label: '↻ RETRY', onClick: () => fetchAll(true) }}
+              >
+                Couldn't load market data. {fetchError}
+              </Banner>
             )}
           </div>
         </div>
@@ -391,6 +396,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
               setSort={setSort}
               filter={filter}
               setFilter={setFilter}
+              loading={fetching}
             />
             <div className="bg-bg-1 border border-line">
               <DetailPanel

@@ -2,6 +2,7 @@ import type { CaseRecord, Pool } from '../lib/cases'
 import type { PriceData, Metrics, PricePoint } from '../lib/metrics'
 import { PoolBadge, MiniSparkline } from './Atoms'
 import { KbdRow, KbdSortHeader } from './primitives/KeyboardTable'
+import { Skeleton } from './primitives/Skeleton'
 
 export interface ItemFull extends CaseRecord {
   price: PriceData | null
@@ -71,9 +72,10 @@ interface TableProps {
   setSort: React.Dispatch<React.SetStateAction<SortState>>
   filter: FilterState
   setFilter: (f: FilterState) => void
+  loading?: boolean
 }
 
-export function CaseTable({ items, selectedId, onSelect, sort, setSort, filter, setFilter }: TableProps) {
+export function CaseTable({ items, selectedId, onSelect, sort, setSort, filter, setFilter, loading }: TableProps) {
   const headers: { k: SortKey | 'idx' | 'spark'; l: string }[] = [
     { k: 'idx', l: '#' },
     { k: 'name', l: 'CASE' },
@@ -151,16 +153,26 @@ export function CaseTable({ items, selectedId, onSelect, sort, setSort, filter, 
         </div>
       </div>
 
-      <div className="max-h-[520px] overflow-y-auto" role="rowgroup">
-        {items.map((item, i) => (
-          <CaseRow
-            key={item.id}
-            item={item}
-            idx={i + 1}
-            selected={item.id === selectedId}
-            onClick={() => onSelect(item.id)}
-          />
-        ))}
+      <div
+        className="max-h-[520px] overflow-y-auto"
+        role="rowgroup"
+        aria-busy={loading || undefined}
+      >
+        {loading && items.length === 0
+          ? Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="px-4 py-2.5 border-b border-line">
+                <Skeleton height={20} />
+              </div>
+            ))
+          : items.map((item, i) => (
+              <CaseRow
+                key={item.id}
+                item={item}
+                idx={i + 1}
+                selected={item.id === selectedId}
+                onClick={() => onSelect(item.id)}
+              />
+            ))}
       </div>
     </div>
   )

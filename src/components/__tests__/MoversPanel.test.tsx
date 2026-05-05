@@ -47,6 +47,14 @@ describe('MoversPanel a11y + keyboard', () => {
     expect(pill.className).toMatch(/inline-flex/)
   })
 
+  it('renders Banner with role=alert when fetch fails', async () => {
+    ;(fetchMovers as any).mockReset()
+    ;(fetchMovers as any).mockRejectedValue(new Error('network down'))
+    render(<MoversPanel onSelect={() => {}} />)
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(/network down/)
+  })
+
   it('row aria-label encodes direction and price', async () => {
     render(<MoversPanel onSelect={() => {}} />)
     const up = await screen.findByRole('row', { name: /glove case, up 32\.4 percent/i })

@@ -2,6 +2,7 @@ import { C } from '../lib/theme'
 import { PoolBadge } from './Atoms'
 import { PriceChart } from './Charts'
 import { AnalysisOutput } from './AnalysisOutput'
+import { Banner } from './primitives/Banner'
 import type { ItemFull } from './CaseTable'
 
 function MetricBar({
@@ -125,11 +126,7 @@ export function DetailPanel({ item, onAnalyze, analysis, analyzing, error }: Pro
             {analyzing ? 'ANALYZING...' : '▸ RUN ANALYSIS'}
           </button>
         </div>
-        {error && (
-          <div className="text-[11px] text-state-err p-2 border border-state-err bg-state-err/5 mb-3">
-            ERR: {error}
-          </div>
-        )}
+        {error && <Banner variant="error" className="mb-3">Analysis failed. {error}</Banner>}
         {analysis && <AnalysisOutput text={analysis} />}
         {!analysis && !analyzing && !error && (
           <div className="text-[11px] text-ink-3 p-5 border border-dashed border-line-bright text-center tracking-[0.1em]">

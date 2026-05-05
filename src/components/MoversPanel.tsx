@@ -4,6 +4,7 @@ import type { MoverRow } from '../lib/api'
 import { PoolBadge } from './Atoms'
 import { C } from '../lib/theme'
 import { KbdRow } from './primitives/KeyboardTable'
+import { Banner } from './primitives/Banner'
 
 const WINDOWS: { label: string; days: number }[] = [
   { label: '24H', days: 1 },
@@ -60,9 +61,7 @@ export function MoversPanel({ onSelect }: { onSelect: (id: string) => void }) {
       {loading && (
         <div className="p-6 text-[11px] text-ink-3 text-center tracking-[0.15em]">// LOADING...</div>
       )}
-      {error && (
-        <div className="p-3 text-[11px] text-state-err border-b border-line">ERR: {error}</div>
-      )}
+      {error && <Banner variant="error" className="m-3">{error}</Banner>}
       {!loading && !error && !enoughHistory && (
         <div className="p-6 text-[11px] text-ink-3 text-center tracking-[0.1em] leading-[1.6]">
           // NOT ENOUGH HISTORY YET
