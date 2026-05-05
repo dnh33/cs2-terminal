@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { CASE_DB, DEMO_PRICES } from '../lib/cases'
 import type { CaseRecord } from '../lib/cases'
 import { computeMetrics, modelPriceHistory } from '../lib/metrics'
@@ -80,6 +80,30 @@ export function useMarketData() {
         prev.map(i => (i.name === caseName ? { ...i, history: points } : i)),
       )
     } catch { /* non-fatal — keep modeled history */ }
+  }, [])
+
+  // Auto-hydrate on mount: ask the worker if it has any data; if so, pull it
+  // immediately so returning users land on the dashboard instead of the
+  // Initialize Feed empty state. fetchAll(false) skips the on-demand stale
+  // refresh — the cron handles freshness, this is a cheap read.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const s = await fetchStats()
+        if (cancelled) return
+        setStats(s)
+        if (s?.last_snapshot_at != null) {
+          await fetchAll(false)
+        }
+      } catch (e: any) {
+        if (!cancelled) setFetchError(`Worker unreachable: ${e.message}`)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   /** Load synthetic prices for offline exploration. */

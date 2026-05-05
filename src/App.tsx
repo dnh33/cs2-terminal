@@ -338,27 +338,30 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
           <div className="max-w-[680px] mx-auto border border-line bg-bg-1 px-8 py-10">
             <div className="font-display text-[36px] tracking-[0.04em] text-accent-sel leading-none">INITIALIZE FEED</div>
             <div className="text-[11px] tracking-[0.2em] text-ink-2 my-3 mb-6">
-              // CHOOSE A DATA SOURCE TO BEGIN MARKET ANALYSIS
+              // FIRST LOAD — PICK A SOURCE
             </div>
             <div className="text-[13px] text-ink-1 mb-7 leading-[1.7] text-left">
-              <strong className="text-accent-data">LIVE MODE</strong> — pulls latest snapshots from your Cloudflare Worker D1 database. The cron writes a fresh row per case every hour; on click, stale cases (&gt;10min old) are refreshed on-demand.
+              <strong className="text-accent-data">LIVE MODE</strong> — pulls latest snapshots from your worker. First sweep can take ~30s.
               <br />
               <br />
-              <strong className="text-accent-sel">DEMO MODE</strong> — loads a curated synthetic dataset with plausible prices grounded in late-2024 market ranges. Use to explore the terminal if the worker isn't deployed yet.
+              Returning visitors auto-hydrate when the worker has data.
             </div>
-            <div className="flex gap-3 justify-center flex-wrap">
+            <div className="flex gap-3 justify-center items-center flex-wrap">
               <button
+                type="button"
                 onClick={() => fetchAll(true)}
                 disabled={fetching}
-                className="text-[12px] tracking-[0.2em] px-6 py-3.5 bg-accent-data text-bg-0 font-bold disabled:opacity-50"
+                data-variant="primary"
+                className="text-[12px] tracking-[0.2em] px-6 py-3.5 bg-accent-sel text-on-accent font-bold disabled:opacity-50"
               >
                 {fetching ? '◌ FETCHING...' : '▸ LIVE — STEAM MARKET'}
               </button>
               <button
+                type="button"
                 onClick={loadDemo}
-                className="text-[12px] tracking-[0.2em] px-6 py-3.5 bg-transparent text-accent-sel font-bold border border-accent-sel"
+                className="text-[12px] tracking-[0.2em] px-3 py-2 text-ink-2 hover:text-ink-0 bg-transparent"
               >
-                ▸ DEMO — SYNTHETIC DATA
+                or explore with synthetic data →
               </button>
             </div>
             {fetchError && (
