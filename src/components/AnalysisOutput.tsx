@@ -17,20 +17,20 @@ export function AnalysisOutput({ text }: { text: string }) {
         if (!t) return <div key={i} className="h-1.5" />
         if (t.startsWith('//'))
           return (
-            <div key={i} className="text-[10px] tracking-[0.2em] text-accent-orange font-bold mt-2.5 mb-1.5">
+            <div key={i} className="text-[10px] tracking-[0.2em] text-accent-sel font-bold mt-2.5 mb-1.5">
               {t}
             </div>
           )
         if (/^#+\s/.test(t))
           return (
-            <div key={i} className="text-[11px] tracking-[0.15em] text-accent-orange font-bold mt-2.5 mb-1.5 uppercase">
+            <div key={i} className="text-[11px] tracking-[0.15em] text-accent-sel font-bold mt-2.5 mb-1.5 uppercase">
               {t.replace(/^#+\s/, '')}
             </div>
           )
         if (/^[-*•]\s/.test(t))
           return (
             <div key={i} className="flex gap-2 pl-1 mb-0.5">
-              <span className="text-accent-cyan shrink-0">›</span>
+              <span className="text-accent-data shrink-0">›</span>
               <span
                 className="text-ink-1"
                 dangerouslySetInnerHTML={{ __html: highlightInline(t.replace(/^[-*•]\s/, '')) }}

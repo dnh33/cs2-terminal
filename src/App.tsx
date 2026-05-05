@@ -330,33 +330,33 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
       {!hasPrice && (
         <div className="px-6 py-10 text-center">
           <div className="max-w-[680px] mx-auto border border-line bg-bg-1 px-8 py-10">
-            <div className="font-display text-[36px] tracking-[0.04em] text-accent-orange leading-none">INITIALIZE FEED</div>
+            <div className="font-display text-[36px] tracking-[0.04em] text-accent-sel leading-none">INITIALIZE FEED</div>
             <div className="text-[11px] tracking-[0.2em] text-ink-2 my-3 mb-6">
               // CHOOSE A DATA SOURCE TO BEGIN MARKET ANALYSIS
             </div>
             <div className="text-[13px] text-ink-1 mb-7 leading-[1.7] text-left">
-              <strong className="text-accent-cyan">LIVE MODE</strong> — pulls latest snapshots from your Cloudflare Worker D1 database. The cron writes a fresh row per case every hour; on click, stale cases (&gt;10min old) are refreshed on-demand.
+              <strong className="text-accent-data">LIVE MODE</strong> — pulls latest snapshots from your Cloudflare Worker D1 database. The cron writes a fresh row per case every hour; on click, stale cases (&gt;10min old) are refreshed on-demand.
               <br />
               <br />
-              <strong className="text-accent-orange">DEMO MODE</strong> — loads a curated synthetic dataset with plausible prices grounded in late-2024 market ranges. Use to explore the terminal if the worker isn't deployed yet.
+              <strong className="text-accent-sel">DEMO MODE</strong> — loads a curated synthetic dataset with plausible prices grounded in late-2024 market ranges. Use to explore the terminal if the worker isn't deployed yet.
             </div>
             <div className="flex gap-3 justify-center flex-wrap">
               <button
                 onClick={() => fetchAll(true)}
                 disabled={fetching}
-                className="text-[12px] tracking-[0.2em] px-6 py-3.5 bg-accent-cyan text-bg-0 font-bold disabled:opacity-50"
+                className="text-[12px] tracking-[0.2em] px-6 py-3.5 bg-accent-data text-bg-0 font-bold disabled:opacity-50"
               >
                 {fetching ? '◌ FETCHING...' : '▸ LIVE — STEAM MARKET'}
               </button>
               <button
                 onClick={loadDemo}
-                className="text-[12px] tracking-[0.2em] px-6 py-3.5 bg-transparent text-accent-orange font-bold border border-accent-orange"
+                className="text-[12px] tracking-[0.2em] px-6 py-3.5 bg-transparent text-accent-sel font-bold border border-accent-sel"
               >
                 ▸ DEMO — SYNTHETIC DATA
               </button>
             </div>
             {fetchError && (
-              <div className="mt-5 p-3 text-[11px] text-accent-red border border-accent-red bg-accent-red/5 text-left">
+              <div className="mt-5 p-3 text-[11px] text-state-err border border-state-err bg-state-err/5 text-left">
                 ERR: {fetchError}
               </div>
             )}
@@ -410,14 +410,14 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
               <button
                 onClick={() => fetchAll(true)}
                 disabled={fetching}
-                className="ml-4 text-[9px] tracking-[0.15em] px-2.5 py-1 text-accent-cyan border border-accent-cyan bg-transparent"
+                className="ml-4 text-[9px] tracking-[0.15em] px-2.5 py-1 text-accent-data border border-accent-data bg-transparent"
               >
                 {fetching ? '◌ SYNCING...' : '↻ REFRESH FEED'}
               </button>
               {stats?.last_cron && (
                 <span className="ml-4 text-ink-3">
                   last cron: {stats.last_cron.succeeded}/{stats.last_cron.succeeded + stats.last_cron.failed} ok
-                  {stats.last_cron.error && <span className="text-accent-red"> — {stats.last_cron.error}</span>}
+                  {stats.last_cron.error && <span className="text-state-err"> — {stats.last_cron.error}</span>}
                 </span>
               )}
             </div>

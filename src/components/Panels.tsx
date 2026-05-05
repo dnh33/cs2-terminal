@@ -30,14 +30,14 @@ export function MarketScanPanel({ items, onScan, scan, scanning, error }: ScanPr
           className={`text-[11px] tracking-[0.15em] px-5 py-2.5 font-bold border ${
             scanning
               ? 'bg-bg-3 text-ink-2 border-line-bright cursor-wait'
-              : 'bg-transparent text-accent-cyan border-accent-cyan hover:bg-accent-cyan/5'
+              : 'bg-transparent text-accent-data border-accent-data hover:bg-accent-data/5'
           }`}
         >
           {scanning ? '◌ SCANNING...' : '▸ RUN FULL SCAN'}
         </button>
       </div>
       {error && (
-        <div className="text-[11px] text-accent-red p-2.5 border border-accent-red bg-accent-red/5 mb-3">
+        <div className="text-[11px] text-state-err p-2.5 border border-state-err bg-state-err/5 mb-3">
           ERR: {error}
         </div>
       )}
@@ -113,7 +113,7 @@ export function ChatPanel({ marketContext }: ChatProps) {
                 <button
                   key={i}
                   onClick={() => setInput(s)}
-                  className="text-left px-3 py-2.5 text-[11px] border border-line text-ink-1 bg-bg-2 hover:border-accent-cyan hover:text-accent-cyan transition-colors"
+                  className="text-left px-3 py-2.5 text-[11px] border border-line text-ink-1 bg-bg-2 hover:border-accent-data hover:text-accent-data transition-colors"
                 >
                   › {s}
                 </button>
@@ -125,13 +125,13 @@ export function ChatPanel({ marketContext }: ChatProps) {
           <div key={i} className="mb-3.5 animate-fade-up">
             <div
               className={`text-[9px] tracking-[0.2em] font-bold mb-1 ${
-                m.role === 'user' ? 'text-accent-cyan' : 'text-accent-orange'
+                m.role === 'user' ? 'text-accent-data' : 'text-accent-sel'
               }`}
             >
               {m.role === 'user' ? '▸ YOU' : '◂ ANALYST'}
             </div>
             {m.role === 'user' ? (
-              <div className="text-[12px] text-ink-0 px-3 py-2 bg-bg-2 border-l-2 border-accent-cyan">{m.content}</div>
+              <div className="text-[12px] text-ink-0 px-3 py-2 bg-bg-2 border-l-2 border-accent-data">{m.content}</div>
             ) : (
               <AnalysisOutput text={m.content} />
             )}
@@ -139,13 +139,13 @@ export function ChatPanel({ marketContext }: ChatProps) {
         ))}
         {busy && (
           <div className="flex items-center gap-2 text-ink-2 text-[11px]">
-            <span className="text-accent-orange animate-blink">◌</span>
+            <span className="text-accent-sel animate-blink">◌</span>
             <span className="tracking-[0.15em]">PROCESSING...</span>
           </div>
         )}
       </div>
       <div className="border-t border-line px-3.5 py-2.5 flex gap-2 items-center bg-bg-2">
-        <span className="text-accent-orange text-[14px]">›</span>
+        <span className="text-accent-sel text-[14px]">›</span>
         <input
           value={input}
           onChange={e => setInput(e.target.value)}
@@ -160,7 +160,7 @@ export function ChatPanel({ marketContext }: ChatProps) {
           onClick={send}
           disabled={busy || !input.trim()}
           className={`text-[10px] tracking-[0.15em] px-3 py-1.5 font-bold ${
-            busy || !input.trim() ? 'bg-bg-3 text-ink-3 cursor-not-allowed' : 'bg-accent-orange text-bg-0'
+            busy || !input.trim() ? 'bg-bg-3 text-ink-3 cursor-not-allowed' : 'bg-accent-sel text-bg-0'
           }`}
         >
           SEND

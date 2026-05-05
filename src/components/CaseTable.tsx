@@ -106,7 +106,7 @@ export function CaseTable({ items, selectedId, onSelect, sort, setSort, filter, 
               onClick={() => setFilter(f)}
               className={`text-[10px] tracking-[0.15em] px-3 py-1.5 min-h-[28px] inline-flex items-center ${
                 filter === f
-                  ? 'border border-accent-orange text-accent-orange bg-accent-orange/10'
+                  ? 'border border-accent-sel text-accent-sel bg-accent-sel/10'
                   : 'border border-line-bright text-ink-1 hover:border-ink-2'
               }`}
             >

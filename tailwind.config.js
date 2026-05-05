@@ -31,15 +31,6 @@ export default {
           sel: cssVar('accent-sel'),
           'sel-dim': cssVar('accent-sel-dim'),
           data: cssVar('accent-data'),
-          // Legacy aliases — see Task 11.5 for the sweep that retires these.
-          orange: cssVar('accent-sel'),
-          'orange-dim': cssVar('accent-sel-dim'),
-          cyan: cssVar('accent-data'),
-          green: cssVar('delta-up'),
-          red: cssVar('delta-dn'),
-          yellow: cssVar('state-warn'),
-          // purple deprecated → ink-3 so any orphan reference still renders something.
-          purple: cssVar('ink-3'),
         },
         delta: {
           up: cssVar('delta-up'),

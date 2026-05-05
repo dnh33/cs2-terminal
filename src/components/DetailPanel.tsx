@@ -67,12 +67,12 @@ export function DetailPanel({ item, onAnalyze, analysis, analyzing, error }: Pro
         <div className="grid grid-cols-3 border-b border-line">
           <div className="px-5 py-3.5 border-r border-line">
             <div className="text-[9px] tracking-[0.2em] text-ink-2">LOWEST ASK</div>
-            <div className="font-display text-[28px] text-accent-orange leading-tight">${p.lowest.toFixed(2)}</div>
+            <div className="font-display text-[28px] text-accent-sel leading-tight">${p.lowest.toFixed(2)}</div>
             <div className="text-[10px] text-ink-2">median ${(p.median || 0).toFixed(2)}</div>
           </div>
           <div className="px-5 py-3.5 border-r border-line">
             <div className="text-[9px] tracking-[0.2em] text-ink-2">24H VOLUME</div>
-            <div className="font-display text-[28px] text-accent-cyan leading-tight">{p.volume.toLocaleString()}</div>
+            <div className="font-display text-[28px] text-accent-data leading-tight">{p.volume.toLocaleString()}</div>
             <div className="text-[10px] text-ink-2">units sold</div>
           </div>
           <div className="px-5 py-3.5">
@@ -119,14 +119,14 @@ export function DetailPanel({ item, onAnalyze, analysis, analyzing, error }: Pro
             className={`text-[10px] tracking-[0.15em] px-3.5 py-1.5 font-bold ${
               analyzing
                 ? 'bg-bg-3 text-ink-2 border border-line-bright cursor-not-allowed'
-                : 'bg-accent-orange text-bg-0 border border-accent-orange hover:opacity-90'
+                : 'bg-accent-sel text-bg-0 border border-accent-sel hover:opacity-90'
             }`}
           >
             {analyzing ? 'ANALYZING...' : '▸ RUN ANALYSIS'}
           </button>
         </div>
         {error && (
-          <div className="text-[11px] text-accent-red p-2 border border-accent-red bg-accent-red/5 mb-3">
+          <div className="text-[11px] text-state-err p-2 border border-state-err bg-state-err/5 mb-3">
             ERR: {error}
           </div>
         )}

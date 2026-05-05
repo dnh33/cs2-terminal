@@ -47,7 +47,7 @@ export function MoversPanel({ onSelect }: { onSelect: (id: string) => void }) {
               onClick={() => setDays(w.days)}
               className={`text-[10px] tracking-[0.15em] px-3 py-1 min-h-[24px] inline-flex items-center ${
                 days === w.days
-                  ? 'border border-accent-orange text-accent-orange bg-accent-orange/10'
+                  ? 'border border-accent-sel text-accent-sel bg-accent-sel/10'
                   : 'border border-line-bright text-ink-2 hover:text-ink-1'
               }`}
             >
@@ -61,7 +61,7 @@ export function MoversPanel({ onSelect }: { onSelect: (id: string) => void }) {
         <div className="p-6 text-[11px] text-ink-3 text-center tracking-[0.15em]">// LOADING...</div>
       )}
       {error && (
-        <div className="p-3 text-[11px] text-accent-red border-b border-line">ERR: {error}</div>
+        <div className="p-3 text-[11px] text-state-err border-b border-line">ERR: {error}</div>
       )}
       {!loading && !error && !enoughHistory && (
         <div className="p-6 text-[11px] text-ink-3 text-center tracking-[0.1em] leading-[1.6]">
