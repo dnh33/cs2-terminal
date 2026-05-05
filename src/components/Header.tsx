@@ -55,7 +55,7 @@ export function Header({ fetching, stats, onLogout }: Props) {
   else if (lastSnap) { feedColor = C.green; feedLabel = 'LIVE' }
 
   return (
-    <div className="border-b border-line bg-bg-1 px-5 py-3.5 flex items-center justify-between sticky top-0 z-50 backdrop-blur">
+    <header className="border-b border-line bg-bg-1 px-5 py-3.5 flex items-center justify-between sticky top-0 z-50 backdrop-blur">
       <Logo />
       <div className="flex items-center gap-6 text-[11px] text-ink-1">
         <div className="flex items-center gap-2">
@@ -88,7 +88,7 @@ export function Header({ fetching, stats, onLogout }: Props) {
           </>
         )}
       </div>
-    </div>
+    </header>
   )
 }
 

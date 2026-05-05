@@ -10,6 +10,7 @@ import { MarketScanPanel, ChatPanel } from './components/Panels'
 import { PoolDistribution, VolumePriceScatter } from './components/Charts'
 import { MoversPanel } from './components/MoversPanel'
 import { LoginScreen } from './components/LoginScreen'
+import { SkipLink } from './components/primitives/SkipLink'
 import { POOL_RANK } from './lib/cases'
 import {
   callClaude,
@@ -318,11 +319,14 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
   const hasPrice = items.some(i => i.price)
 
   return (
-    <div className="min-h-screen">
-      <Header fetching={fetching} stats={stats} onLogout={onLogout} />
-      {hasPrice && <Ticker rows={tickerRows} />}
-      {hasPrice && <MarketStats items={items} />}
+    <>
+      <SkipLink targetId="main" />
+      <div className="min-h-screen flex flex-col">
+        <Header fetching={fetching} stats={stats} onLogout={onLogout} />
+        {hasPrice && <Ticker rows={tickerRows} />}
+        {hasPrice && <MarketStats items={items} />}
 
+        <main id="main" className="flex-1">
       {!hasPrice && (
         <div className="px-6 py-10 text-center">
           <div className="max-w-[680px] mx-auto border border-line bg-bg-1 px-8 py-10">
@@ -395,25 +399,31 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
           </div>
 
           <ChatPanel marketContext={marketContext} />
-
-          <div className="mt-5 px-5 py-4 border border-line bg-bg-1 text-[10px] text-ink-2 tracking-[0.05em] leading-[1.6]">
-            <strong className="text-ink-1">// DISCLAIMER</strong> — Analytical tool, not investment advice. Steam Market prices via your Cloudflare Worker proxy, stored in D1. CS2 case prices are highly speculative; Valve can change drop pool status at any time. Steam takes 15% on resale.
-            <button
-              onClick={() => fetchAll(true)}
-              disabled={fetching}
-              className="ml-4 text-[9px] tracking-[0.15em] px-2.5 py-1 text-accent-cyan border border-accent-cyan bg-transparent"
-            >
-              {fetching ? '◌ SYNCING...' : '↻ REFRESH FEED'}
-            </button>
-            {stats?.last_cron && (
-              <span className="ml-4 text-ink-3">
-                last cron: {stats.last_cron.succeeded}/{stats.last_cron.succeeded + stats.last_cron.failed} ok
-                {stats.last_cron.error && <span className="text-accent-red"> — {stats.last_cron.error}</span>}
-              </span>
-            )}
-          </div>
         </div>
       )}
-    </div>
+        </main>
+
+        <footer className="px-6 pb-6">
+          {hasPrice && (
+            <div className="mt-5 px-5 py-4 border border-line bg-bg-1 text-[10px] text-ink-2 tracking-[0.05em] leading-[1.6]">
+              <strong className="text-ink-1">// DISCLAIMER</strong> — Analytical tool, not investment advice. Steam Market prices via your Cloudflare Worker proxy, stored in D1. CS2 case prices are highly speculative; Valve can change drop pool status at any time. Steam takes 15% on resale.
+              <button
+                onClick={() => fetchAll(true)}
+                disabled={fetching}
+                className="ml-4 text-[9px] tracking-[0.15em] px-2.5 py-1 text-accent-cyan border border-accent-cyan bg-transparent"
+              >
+                {fetching ? '◌ SYNCING...' : '↻ REFRESH FEED'}
+              </button>
+              {stats?.last_cron && (
+                <span className="ml-4 text-ink-3">
+                  last cron: {stats.last_cron.succeeded}/{stats.last_cron.succeeded + stats.last_cron.failed} ok
+                  {stats.last_cron.error && <span className="text-accent-red"> — {stats.last_cron.error}</span>}
+                </span>
+              )}
+            </div>
+          )}
+        </footer>
+      </div>
+    </>
   )
 }
