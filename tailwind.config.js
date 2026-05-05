@@ -1,35 +1,59 @@
 /** @type {import('tailwindcss').Config} */
+
+// Helper: Tailwind v3 needs space-separated channel triplets to layer on
+// the <alpha-value> at compile time. Returns the rgb() expression Tailwind
+// rewrites at compile time when an opacity modifier is applied.
+const cssVar = (name) => `rgb(var(--${name}-rgb) / <alpha-value>)`
+
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
         bg: {
-          0: '#07080a',
-          1: '#0d1014',
-          2: '#12161c',
-          3: '#1a1f27',
+          0: cssVar('bg-0'),
+          1: cssVar('bg-1'),
+          2: cssVar('bg-2'),
+          3: cssVar('bg-3'),
+          4: cssVar('bg-4'),
         },
         line: {
-          DEFAULT: '#232932',
-          bright: '#2f3742',
+          DEFAULT: cssVar('line'),
+          bright: cssVar('line-hi'),
         },
         ink: {
-          0: '#e8ecf2',
-          1: '#a8b0bc',
-          2: '#6b7380',
-          3: '#444a55',
+          0: cssVar('ink-0'),
+          1: cssVar('ink-1'),
+          2: cssVar('ink-2'),
+          3: cssVar('ink-3'),
         },
         accent: {
-          orange: '#ff7421',
-          'orange-dim': '#c25817',
-          cyan: '#4fd1c5',
-          'cyan-dim': '#2a8a82',
-          green: '#4ade80',
-          red: '#f87171',
-          yellow: '#fbbf24',
-          purple: '#a78bfa',
+          sel: cssVar('accent-sel'),
+          'sel-dim': cssVar('accent-sel-dim'),
+          data: cssVar('accent-data'),
+          // Legacy aliases — see Task 11.5 for the sweep that retires these.
+          orange: cssVar('accent-sel'),
+          'orange-dim': cssVar('accent-sel-dim'),
+          cyan: cssVar('accent-data'),
+          green: cssVar('delta-up'),
+          red: cssVar('delta-dn'),
+          yellow: cssVar('state-warn'),
+          // purple deprecated → ink-3 so any orphan reference still renders something.
+          purple: cssVar('ink-3'),
         },
+        delta: {
+          up: cssVar('delta-up'),
+          dn: cssVar('delta-dn'),
+        },
+        state: {
+          warn: cssVar('state-warn'),
+          err: cssVar('state-err'),
+          info: cssVar('state-info'),
+          ok: cssVar('state-ok'),
+        },
+        modeled: cssVar('modeled'),
+        'on-accent': cssVar('on-accent'),
+        'focus-inverse': cssVar('focus-inverse'),
       },
       fontFamily: {
         mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
