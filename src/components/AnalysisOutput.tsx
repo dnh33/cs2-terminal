@@ -11,7 +11,7 @@ function highlightInline(s: string): string {
 export function AnalysisOutput({ text }: { text: string }) {
   const lines = text.split('\n')
   return (
-    <div className="text-[12px] leading-[1.6] text-ink-1 bg-bg-0 border border-line px-4 py-3.5 font-mono">
+    <div className="font-prose t-body text-ink-1 bg-bg-0 border border-line px-4 py-3.5">
       {lines.map((line, i) => {
         const t = line.trim()
         if (!t) return <div key={i} className="h-1.5" />

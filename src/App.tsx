@@ -15,7 +15,7 @@ import { ErrorBoundary } from './components/primitives/ErrorBoundary'
 import { Banner } from './components/primitives/Banner'
 import { POOL_RANK } from './lib/cases'
 import {
-  callClaude,
+  callClaudeStream,
   ANALYST_SYSTEM,
   checkAuth,
   logout,
@@ -222,7 +222,7 @@ function AppDashboard({ onLogout }: DashboardProps) {
     if (!selected || !selected.price || !selected.metrics) return
     setAnalyzing(true)
     setAnalysisError(null)
-    setAnalysis(null)
+    setAnalysis('')
     try {
       const realHistory = (selected.history || []).filter(h => h.source === 'real')
       const historyBlock = formatHistoryBlock(realHistory)
@@ -240,14 +240,20 @@ Special items: ${selected.rare}${selected.hasGloves ? ' (incl. gloves)' : ''}
 
 === TIME SERIES (real D1 snapshots, this case only) ===
 ${historyBlock}`
-      const reply = await callClaude({
-        messages: [{ role: 'user', content: userMsg }],
-        system: ANALYST_SYSTEM + '\n\n=== FULL MARKET CONTEXT ===\n' + marketContext,
-        // Cache the (large, static) system prompt — saves ~90% on subsequent
-        // calls within the cache window when using anthropic/* models.
-        cache_system_prompt: true,
-      })
-      setAnalysis(reply)
+      let full = ''
+      await callClaudeStream(
+        {
+          messages: [{ role: 'user', content: userMsg }],
+          system: ANALYST_SYSTEM + '\n\n=== FULL MARKET CONTEXT ===\n' + marketContext,
+          // Cache the (large, static) system prompt — saves ~90% on subsequent
+          // calls within the cache window when using anthropic/* models.
+          cache_system_prompt: true,
+        },
+        delta => {
+          full += delta
+          setAnalysis(full)
+        },
+      )
     } catch (e: any) {
       setAnalysisError(e.message)
     } finally {
@@ -258,7 +264,7 @@ ${historyBlock}`
   async function runScan() {
     setScanning(true)
     setScanError(null)
-    setScan(null)
+    setScan('')
     try {
       // Pull % change windows for the whole universe in parallel — gives Claude
       // real time-series signal instead of just "current snapshot" cross-section.
@@ -290,15 +296,21 @@ If $500 to deploy across this universe today, how would you split it? Specific $
 End with one brief disclaimer line.
 
 When citing momentum, trends, or "movers", use ONLY the % change windows table below. Cases not in the table simply lack the snapshots — never invent trends for them.`
-      const reply = await callClaude({
-        messages: [{ role: 'user', content: userMsg }],
-        system: ANALYST_SYSTEM + '\n\n=== FULL MARKET CONTEXT ===\n' + enhancedContext,
-        cache_system_prompt: true,
-        // Market Scan output is identical for identical inputs — cache for 5 min.
-        // If a user spams the button, hits 2..N are completely free.
-        cache_response_ttl: 300,
-      })
-      setScan(reply)
+      let full = ''
+      await callClaudeStream(
+        {
+          messages: [{ role: 'user', content: userMsg }],
+          system: ANALYST_SYSTEM + '\n\n=== FULL MARKET CONTEXT ===\n' + enhancedContext,
+          cache_system_prompt: true,
+          // Market Scan output is identical for identical inputs — cache for 5 min.
+          // If a user spams the button, hits 2..N are completely free.
+          cache_response_ttl: 300,
+        },
+        delta => {
+          full += delta
+          setScan(full)
+        },
+      )
     } catch (e: any) {
       setScanError(e.message)
     } finally {

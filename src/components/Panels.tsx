@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { callClaude, ANALYST_SYSTEM } from '../lib/api'
+import { callClaudeStream, ANALYST_SYSTEM } from '../lib/api'
 import { AnalysisOutput } from './AnalysisOutput'
 import { StatusDot } from './Atoms'
 import { Banner } from './primitives/Banner'
@@ -67,19 +67,34 @@ export function ChatPanel({ marketContext }: ChatProps) {
     const txt = input.trim()
     if (!txt || busy) return
     const newMsgs = [...messages, { role: 'user' as const, content: txt }]
-    setMessages(newMsgs)
     setInput('')
     setBusy(true)
+    // Append empty assistant message we'll mutate as deltas arrive.
+    setMessages([...newMsgs, { role: 'assistant', content: '' }])
     try {
-      const reply = await callClaude({
-        messages: newMsgs,
-        system: ANALYST_SYSTEM + '\n\n=== CURRENT MARKET DATASET ===\n' + marketContext,
-        // Same big system prompt across all turns — cache it once.
-        cache_system_prompt: true,
-      })
-      setMessages([...newMsgs, { role: 'assistant', content: reply }])
+      let full = ''
+      await callClaudeStream(
+        {
+          messages: newMsgs,
+          system: ANALYST_SYSTEM + '\n\n=== CURRENT MARKET DATASET ===\n' + marketContext,
+          // Same big system prompt across all turns — cache it once.
+          cache_system_prompt: true,
+        },
+        delta => {
+          full += delta
+          setMessages(prev => {
+            const copy = [...prev]
+            copy[copy.length - 1] = { role: 'assistant', content: full }
+            return copy
+          })
+        },
+      )
     } catch (e: any) {
-      setMessages([...newMsgs, { role: 'assistant', content: `// SYSTEM ERROR\n- ${e.message}` }])
+      setMessages(prev => {
+        const copy = [...prev]
+        copy[copy.length - 1] = { role: 'assistant', content: `// SYSTEM ERROR\n- ${e.message}` }
+        return copy
+      })
     } finally {
       setBusy(false)
     }
