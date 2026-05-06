@@ -1245,6 +1245,29 @@ export default {
         }, env)
       }
 
+      // /admin/items/bootstrap — one-shot serial populate of both item tiers.
+      // Used on initial deploy so the FIT framework's unbox_ev_ratio component
+      // has data immediately rather than waiting 12h for the low-tier cron.
+      // Long-running (~22 min for ~250 items at 4s spacing) — runs entirely
+      // inside the request handler. Requires admin token.
+      if (url.pathname === '/admin/items/bootstrap' && request.method === 'POST') {
+        const token = request.headers.get('X-Admin-Token')
+        if (!token || token !== env.ADMIN_TOKEN) {
+          return jsonResponse({ error: 'admin token required' }, env, 401)
+        }
+        const startedAt = Math.floor(Date.now() / 1000)
+        try {
+          const high = await sweepItemsHigh(env)
+          const low = await sweepItemsLow(env)
+          return jsonResponse(
+            { ok: true, started_at: startedAt, high, low, finished_at: Math.floor(Date.now() / 1000) },
+            env,
+          )
+        } catch (e: any) {
+          return jsonResponse({ ok: false, error: e.message }, env, 500)
+        }
+      }
+
       // Admin: backfill historical data via Steam pricehistory (requires login cookie)
       if (url.pathname === '/admin/backfill' && request.method === 'POST') {
         const provided = request.headers.get('x-admin-token')
