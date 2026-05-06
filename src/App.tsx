@@ -25,6 +25,7 @@ import {
   getStoredToken,
 } from './lib/api'
 import { streamAnalysis, type AnalysisVerdict } from './lib/streamAnalysis'
+import { computeDivergence } from './lib/divergence'
 import type { PricePoint } from './lib/metrics'
 import { saveAnalysis, loadAnalysis, saveScan, loadLastScan } from './lib/persist'
 import { useSelectedCase } from './lib/useSelectedCase'
@@ -214,6 +215,16 @@ function AppDashboard({ onLogout }: DashboardProps) {
   // we don't fan out 41× /api/items/medians calls on dashboard load.
   const [itemMedians, setItemMedians] = useState<Record<string, ItemMediansResponse>>({})
   const [cmdkOpen, setCmdkOpen] = useState(false)
+  // P1-#3 prep: track the snapshot timestamp captured at the most recent
+  // successful market scan completion. DetailPanel uses this together with
+  // the current `stats.last_snapshot_at` to gate the "from this scan" pill —
+  // we only show the pill when the underlying snapshot still matches the
+  // scan that produced the chip, otherwise the breadcrumb would lie.
+  const [lastScanSnapshotAt, setLastScanSnapshotAt] = useState<number | null>(null)
+  // P2-#5: AbortController shared by analyzeCase / analyzeCaseDevilsAdvocate.
+  // Re-runs (button mash, selection change) abort the in-flight request so
+  // we don't race two streams into the same setAnalysis().
+  const analysisAbortRef = useRef<AbortController | null>(null)
   const chatRef = useRef<ChatPanelHandle>(null)
 
   const selected = items.find(i => i.id === selectedId)
@@ -229,6 +240,16 @@ function AppDashboard({ onLogout }: DashboardProps) {
     setAnalysis(null)
     setAnalysisError(null)
     setVerdict(null)
+  }, [selectedId])
+
+  // P2-#5: cancel any in-flight analysis when the selection changes (or the
+  // dashboard unmounts). Without this, switching cases mid-stream would let
+  // the prior analysis's onProse callback continue racing setAnalysis().
+  useEffect(() => {
+    return () => {
+      analysisAbortRef.current?.abort()
+      analysisAbortRef.current = null
+    }
   }, [selectedId])
 
   // Lazy fetch item medians on case selection. Cached per-id so re-selecting a
@@ -279,6 +300,18 @@ function AppDashboard({ onLogout }: DashboardProps) {
   }, [items, itemMedians, stats?.last_snapshot_at])
 
   const fit = selectedId ? fitResults[selectedId] : undefined
+
+  // P2-#6: verdict-FIT divergence policy. computeDivergence is pure; cheap
+  // memo so DetailPanel can render the "Model Override" / "We don't know"
+  // chips without each render recomputing. Returns null until both fit and
+  // verdict are available, which keeps the empty-state quiet.
+  const divergence = useMemo(() => {
+    if (!fit || fit.status !== 'ok' || !verdict) return null
+    return computeDivergence(verdict.verdict, verdict.confidence, {
+      fit: fit.fit,
+      confidence: fit.confidence,
+    })
+  }, [fit, verdict])
 
   // Peer candidates — every priced case with a FitResult. PeersList itself
   // filters out the target and non-ok statuses, then sorts by Euclidean
@@ -359,6 +392,12 @@ function AppDashboard({ onLogout }: DashboardProps) {
 
   async function analyzeCase() {
     if (!selected || !selected.price || !selected.metrics) return
+    // P2-#5: abort any prior in-flight analysis stream before kicking a new
+    // one off. Mash-protection + clean handoff between regular ↔ devil's
+    // advocate paths so they share a single cancel-token contract.
+    analysisAbortRef.current?.abort()
+    const controller = new AbortController()
+    analysisAbortRef.current = controller
     setAnalyzing(true)
     setAnalysisError(null)
     setVerdict(null)
@@ -408,6 +447,7 @@ ${historyBlock}`
         // Opts in to the sentinel-injected verdict tail (Worker T28 reads
         // this and prepends the sentinel-instruction system prompt).
         structured: true,
+        signal: controller.signal,
         onProse: (delta) => {
           proseAccum += delta
           setAnalysis(proseAccum)
@@ -420,9 +460,12 @@ ${historyBlock}`
       // Only persist successful streams (prose only — verdict is in-memory).
       saveAnalysis(selected.id, snapshotKey, proseAccum)
     } catch (e: any) {
-      setAnalysisError(e.message)
+      // Aborts are user-initiated (selection change, mash) — swallow silently
+      // so a benign cancel doesn't surface as a red error banner.
+      if (e?.name !== 'AbortError') setAnalysisError(e.message)
     } finally {
       setAnalyzing(false)
+      if (analysisAbortRef.current === controller) analysisAbortRef.current = null
     }
   }
 
@@ -433,8 +476,17 @@ ${historyBlock}`
    */
   async function analyzeCaseDevilsAdvocate() {
     if (!selected || !selected.price || !selected.metrics) return
+    // P2-#5 + P2-#7: share the AbortController contract with analyzeCase, and
+    // route through streamAnalysis(structured:true) so the contrarian path
+    // also produces a verdict — previously the devil's advocate ran via raw
+    // callClaudeStream and the verdict couldn't update from the contrarian
+    // reasoning, leaving the badge stuck on the prior LONG/AVOID call.
+    analysisAbortRef.current?.abort()
+    const controller = new AbortController()
+    analysisAbortRef.current = controller
     setAnalyzing(true)
     setAnalysisError(null)
+    setVerdict(null)
     setAnalysis('')
     try {
       const realHistory = (selected.history || []).filter(h => h.source === 'real')
@@ -452,22 +504,26 @@ Notable: ${selected.notable}
 
 === TIME SERIES (real D1 snapshots, this case only) ===
 ${historyBlock}`
-      let full = ''
-      await callClaudeStream(
-        {
-          messages: [{ role: 'user', content: userMsg }],
-          system: ANALYST_SYSTEM + '\n\n=== FULL MARKET CONTEXT ===\n' + marketContext,
-          cache_system_prompt: true,
+      let proseAccum = ''
+      const result = await streamAnalysis({
+        prompt: userMsg,
+        system: ANALYST_SYSTEM + '\n\n=== FULL MARKET CONTEXT ===\n' + marketContext,
+        structured: true,
+        signal: controller.signal,
+        onProse: (delta) => {
+          proseAccum += delta
+          setAnalysis(proseAccum)
         },
-        delta => { full += delta; setAnalysis(full) },
-      )
+      })
+      if (result.verdict) setVerdict(result.verdict)
       // Cache under a distinct key — devil's advocate output ≠ regular analysis
       const snapshotKey = stats?.last_snapshot_at ?? 0
-      try { localStorage.setItem(`cs-analysis-devil:v2:${selected.id}:${snapshotKey}`, full) } catch { /* ignore */ }
+      try { localStorage.setItem(`cs-analysis-devil:v2:${selected.id}:${snapshotKey}`, proseAccum) } catch { /* ignore */ }
     } catch (e: any) {
-      setAnalysisError(e.message)
+      if (e?.name !== 'AbortError') setAnalysisError(e.message)
     } finally {
       setAnalyzing(false)
+      if (analysisAbortRef.current === controller) analysisAbortRef.current = null
     }
   }
 
@@ -523,6 +579,11 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
       )
       // Persist last successful scan so refresh doesn't wipe expensive output.
       saveScan(full)
+      // P1-#3: capture the snapshot the scan was computed against. DetailPanel
+      // gates the "from this scan" pill on this matching the current
+      // stats.last_snapshot_at — once cron rolls forward, the breadcrumb is
+      // hidden so we don't claim a stale market scan as the current source.
+      setLastScanSnapshotAt(stats?.last_snapshot_at ?? null)
     } catch (e: any) {
       setScanError(e.message)
     } finally {
@@ -581,7 +642,8 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
     ]
     const actionItems: CmdKItem[] = [
       { id: 'action:scan', section: 'action', label: 'Run Market Scan' },
-      { id: 'action:analyze', section: 'action', label: 'Run Analysis on Selected Case' },
+      // P3-#12: keep this discoverable but inert until a case is picked.
+      { id: 'action:analyze', section: 'action', label: 'Run Analysis on Selected Case', disabled: !selectedId },
       { id: 'action:refresh', section: 'action', label: 'Refresh Feed' },
       { id: 'action:logout', section: 'action', label: 'Sign Out' },
     ]
@@ -589,7 +651,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
       { id: 'toggle:palette', section: 'toggle', label: 'Cycle Palette Mode (STD/AMBER/GREEN)' },
     ]
     return [...caseItems, ...panelItems, ...actionItems, ...toggleItems]
-  }, [items])
+  }, [items, selectedId])
 
   function handleCmdKActivate(item: CmdKItem) {
     setCmdkOpen(false)
@@ -626,7 +688,17 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
   useGlobalKeystroke({
     onCmdK: () => setCmdkOpen((o) => !o),
     onSlash: () => chatRef.current?.focusInput(),
-    // onEsc wires in T36
+    // P1-#2: global Esc handler. CmdK takes priority — if the palette is
+    // open, close it. Otherwise blur the focused element (excluding body),
+    // mirroring how terminal users expect Esc to "back out" of any field.
+    onEsc: () => {
+      if (cmdkOpen) {
+        setCmdkOpen(false)
+        return
+      }
+      const active = document.activeElement
+      if (active instanceof HTMLElement && active !== document.body) active.blur()
+    },
   })
 
   return (
@@ -732,6 +804,9 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
                 onDevilsAdvocate={analyzeCaseDevilsAdvocate}
                 verdict={verdict?.verdict}
                 confidence={verdict?.confidence}
+                divergence={divergence}
+                scanSnapshotAt={lastScanSnapshotAt}
+                currentSnapshotAt={stats?.last_snapshot_at ?? null}
               />
             </div>
           </div>

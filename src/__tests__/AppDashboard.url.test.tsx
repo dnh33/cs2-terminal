@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 
 // Mock useMarketData so we don't hit the worker.
 vi.mock('../hooks/useMarketData', () => ({
@@ -50,7 +50,13 @@ describe('AppDashboard URL state', () => {
     // Click the case row (the row label includes the case name)
     const row = screen.getAllByText('Glove Case').map(n => n.closest('[role="row"]')).find(Boolean)
     expect(row).toBeTruthy()
-    row!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    // Wrap the synchronous click in act() — it triggers a setState chain
+    // (selection → URL push → re-render → real-history fetch effect) that
+    // would otherwise emit React's "not wrapped in act" warning during the
+    // useEffect's commit phase. waitFor below catches the URL update.
+    await act(async () => {
+      row!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
     await waitFor(() => expect(window.location.search).toBe('?case=glove-case'))
   })
 })

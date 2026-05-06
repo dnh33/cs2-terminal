@@ -9,6 +9,12 @@ export interface CmdKItem {
   /** Optional right-aligned meta text (e.g. tier tag, current value) */
   meta?: string
   tier?: 'discontinued' | 'rare' | 'active'
+  /**
+   * P3-#12: when true, the row renders dimmed and Enter / click are no-ops.
+   * Lets actions like "Run Analysis" surface in the palette but stay inert
+   * when there's no selected case — discoverable but harmless.
+   */
+  disabled?: boolean
 }
 
 interface Props {
@@ -32,13 +38,15 @@ const SECTION_ORDER: CmdKSection[] = ['cases', 'panels', 'action', 'toggle']
 function OptionRow({
   item, selected, optionId, onActivate,
 }: { item: CmdKItem; selected: boolean; optionId: string; onActivate: () => void }) {
+  const disabled = item.disabled === true
   return (
     <div
       id={optionId}
       role="option"
       aria-selected={selected}
-      onClick={onActivate}
-      className="px-4 py-2 text-[12px] cursor-pointer flex items-center justify-between"
+      aria-disabled={disabled || undefined}
+      onClick={disabled ? undefined : onActivate}
+      className={`px-4 py-2 text-[12px] flex items-center justify-between ${disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
       style={{
         borderLeft: selected ? '2px solid var(--accent-sel)' : '2px solid transparent',
         background: selected ? 'rgb(var(--accent-sel-rgb) / 0.08)' : 'transparent',
@@ -128,7 +136,7 @@ export function CmdK({ open, onClose, items, onActivate }: Props) {
         setSelectedIdx((i) => Math.max(i - 1, 0))
       } else if (e.key === 'Enter') {
         const item = visibleItems[selectedIdx]
-        if (item) {
+        if (item && !item.disabled) {
           e.preventDefault()
           onActivate(item)
         }
