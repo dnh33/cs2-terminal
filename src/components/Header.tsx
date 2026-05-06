@@ -39,7 +39,7 @@ export function Header({ fetching, stats, onLogout }: Props) {
             </LiveRegion>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-ink-2">
+        <div data-test="header-controls" className="hidden md:flex items-center gap-3 text-ink-2">
           <PaletteSwitch />
           <span className="text-ink-3">·</span>
           <span className="t-data text-accent-data">claude-sonnet-4.5</span>
@@ -57,6 +57,19 @@ export function Header({ fetching, stats, onLogout }: Props) {
                 SIGN OUT
               </button>
             </>
+          )}
+        </div>
+        {/* Mobile cluster — sign-out only, plus a slot for the future ⌘K hint button (T36) */}
+        <div className="flex md:hidden items-center gap-3 text-ink-2">
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              className="t-label text-ink-2 hover:text-state-err"
+              title="Sign out"
+            >
+              SIGN OUT
+            </button>
           )}
         </div>
       </div>
