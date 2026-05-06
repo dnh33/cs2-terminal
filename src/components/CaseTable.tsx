@@ -30,36 +30,62 @@ function CaseRow({ item, idx, selected, onClick }: RowProps) {
       onActivate={onClick}
       selected={selected}
       aria-label={`${item.name}, ${item.pool}, ${p ? `lowest $${p.lowest.toFixed(2)}` : 'no price'}`}
-      className="grid items-center px-4 py-2.5 border-b border-line cursor-pointer text-[12px] transition-colors hover:bg-white/[0.02]"
+      className="border-b border-line cursor-pointer transition-colors hover:bg-white/[0.02]"
       style={{
-        gridTemplateColumns: '24px 2fr 60px 90px 70px 70px 70px 70px 80px',
         background: bg,
         borderLeft: selected ? '2px solid var(--accent-sel)' : '2px solid transparent',
       }}
     >
-      <div className="text-ink-3 text-[10px]">{String(idx).padStart(2, '0')}</div>
-      <div>
-        <div className="text-ink-0 font-medium">{item.name}</div>
-        <div className="text-[10px] text-ink-2 mt-0.5">
-          {item.released} · {item.rare}{item.hasGloves ? ' · GLV' : ''}
+      {/* Mobile card */}
+      <div data-mobile-card className="flex md:hidden items-center justify-between px-4 py-3 gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <PoolBadge pool={item.pool} />
+            <span className="text-ink-0 text-[12px] truncate">{item.name}</span>
+          </div>
+          <div className="text-[10px] text-ink-2 mt-0.5">
+            {item.released} · {item.rare}{item.hasGloves ? ' · GLV' : ''}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="t-data-bold text-ink-0">
+            {p ? `$${p.lowest.toFixed(2)}` : '—'}
+          </div>
+          <div className="text-[10px] text-ink-2">
+            {p ? `${p.volume.toLocaleString()} 24H` : '—'}
+          </div>
         </div>
       </div>
-      <PoolBadge pool={item.pool} />
-      <div className="t-data-bold text-ink-0">
-        {p ? `$${p.lowest.toFixed(2)}` : <span className="text-ink-3 text-[11px]">—</span>}
+
+      {/* Desktop grid */}
+      <div
+        className="hidden md:grid items-center px-4 py-2.5 text-[12px]"
+        style={{ gridTemplateColumns: '24px 2fr 60px 90px 70px 70px 70px 70px 80px' }}
+      >
+        <div className="text-ink-3 text-[10px]">{String(idx).padStart(2, '0')}</div>
+        <div>
+          <div className="text-ink-0 font-medium">{item.name}</div>
+          <div className="text-[10px] text-ink-2 mt-0.5">
+            {item.released} · {item.rare}{item.hasGloves ? ' · GLV' : ''}
+          </div>
+        </div>
+        <PoolBadge pool={item.pool} />
+        <div className="t-data-bold text-ink-0">
+          {p ? `$${p.lowest.toFixed(2)}` : <span className="text-ink-3 text-[11px]">—</span>}
+        </div>
+        <div className="text-ink-1">{p ? `$${(p.median || 0).toFixed(2)}` : '—'}</div>
+        <div className={m && m.spreadPct > 5 ? 'text-state-warn' : 'text-ink-1'}>
+          {m ? `${m.spreadPct.toFixed(1)}%` : '—'}
+        </div>
+        <div className={p && p.volume > 1000 ? 'text-delta-up' : p && p.volume > 100 ? 'text-ink-1' : 'text-ink-3'}>
+          {p ? p.volume.toLocaleString() : '—'}
+        </div>
+        <div className="text-ink-1">{m ? `${m.ageYears.toFixed(1)}y` : '—'}</div>
+        <MiniSparkline
+          data={item.history?.map(h => h.price)}
+          modeled={!item.history?.some(h => h.source === 'real')}
+        />
       </div>
-      <div className="text-ink-1">{p ? `$${(p.median || 0).toFixed(2)}` : '—'}</div>
-      <div className={m && m.spreadPct > 5 ? 'text-state-warn' : 'text-ink-1'}>
-        {m ? `${m.spreadPct.toFixed(1)}%` : '—'}
-      </div>
-      <div className={p && p.volume > 1000 ? 'text-delta-up' : p && p.volume > 100 ? 'text-ink-1' : 'text-ink-3'}>
-        {p ? p.volume.toLocaleString() : '—'}
-      </div>
-      <div className="text-ink-1">{m ? `${m.ageYears.toFixed(1)}y` : '—'}</div>
-      <MiniSparkline
-        data={item.history?.map(h => h.price)}
-        modeled={!item.history?.some(h => h.source === 'real')}
-      />
     </KbdRow>
   )
 }
@@ -120,7 +146,7 @@ export function CaseTable({ items, selectedId, onSelect, sort, setSort, filter, 
 
       <div role="rowgroup">
         <div
-          className="grid px-4 py-2 border-b border-line bg-bg-2"
+          className="hidden md:grid px-4 py-2 border-b border-line bg-bg-2"
           role="row"
           style={{ gridTemplateColumns: '24px 2fr 60px 90px 70px 70px 70px 70px 80px' }}
         >
