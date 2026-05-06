@@ -346,6 +346,18 @@ export async function fetchEmbeddings(req: EmbeddingsRequest): Promise<Embedding
   return jsonPost<EmbeddingsResult>('/embeddings', req)
 }
 
+// Re-export streamAnalysis types so consumers can import the structured
+// analysis surface from the same module they already use for callClaude.
+// Implementation lives in ./streamAnalysis to keep api.ts focused on
+// transport. Re-export only — no logic change here.
+export type {
+  AnalysisVerdict,
+  ParseError,
+  ParsedStream,
+  StreamAnalysisOptions,
+  StreamAnalysisResult,
+} from './streamAnalysis'
+
 export const ANALYST_SYSTEM = `You are a senior CS2 case market analyst. Write like a Bloomberg analyst who plays Counter-Strike — direct, numerate, no hype.
 
 Hard rules:
