@@ -4,6 +4,7 @@ import { AnalysisOutput } from './AnalysisOutput'
 import { ScanOutput } from './ScanOutput'
 import { StatusDot } from './Atoms'
 import { Banner } from './primitives/Banner'
+import { MentionPopover } from './MentionPopover'
 import { C } from '../lib/theme'
 import type { ItemFull } from './CaseTable'
 
@@ -61,19 +62,45 @@ export function MarketScanPanel({ items, onScan, scan, scanning, error, onSelect
 
 interface ChatProps {
   marketContext: string
+  cases?: { id: string; name: string }[]
 }
 
 export interface ChatPanelHandle {
   focusInput: () => void
 }
 
-export const ChatPanel = forwardRef<ChatPanelHandle, ChatProps>(function ChatPanel({ marketContext }, ref) {
+export const ChatPanel = forwardRef<ChatPanelHandle, ChatProps>(function ChatPanel({ marketContext, cases }, ref) {
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
+  const [mentionOpen, setMentionOpen] = useState(false)
+  const [mentionQuery, setMentionQuery] = useState('')
+  const [mentionStart, setMentionStart] = useState(-1)
+  const [mentionEnd, setMentionEnd] = useState(-1)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   useImperativeHandle(ref, () => ({ focusInput() { inputRef.current?.focus() } }))
+
+  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value
+    setInput(v)
+    const caretPos = e.target.selectionStart ?? v.length
+    const before = v.slice(0, caretPos)
+    const atIdx = before.lastIndexOf('@')
+    if (atIdx >= 0) {
+      const candidate = before.slice(atIdx + 1)
+      if (!candidate.includes(' ')) {
+        setMentionStart(atIdx)
+        setMentionEnd(caretPos)
+        setMentionQuery(candidate)
+        setMentionOpen(true)
+        return
+      }
+    }
+    setMentionOpen(false)
+    setMentionStart(-1)
+    setMentionEnd(-1)
+  }
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -172,13 +199,31 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatProps>(function ChatPan
           </div>
         )}
       </div>
-      <div className="border-t border-line px-3.5 py-2.5 flex gap-2 items-center bg-bg-2">
+      <div className="relative border-t border-line px-3.5 py-2.5 flex gap-2 items-center bg-bg-2">
+        <MentionPopover
+          open={mentionOpen && (cases?.length ?? 0) > 0}
+          query={mentionQuery}
+          cases={cases ?? []}
+          anchor={null}
+          onPick={(name) => {
+            if (mentionStart < 0 || mentionEnd < 0) { setMentionOpen(false); return }
+            const before = input.slice(0, mentionStart)
+            const after = input.slice(mentionEnd)
+            setInput(`${before}${name}${after}`)
+            setMentionOpen(false)
+            setMentionStart(-1)
+            setMentionEnd(-1)
+            inputRef.current?.focus()
+          }}
+          onClose={() => { setMentionOpen(false); setMentionStart(-1); setMentionEnd(-1) }}
+        />
         <span className="text-accent-sel text-[14px]">›</span>
         <input
           ref={inputRef}
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={onInputChange}
           onKeyDown={e => {
+            if (mentionOpen) return
             if (e.key === 'Enter') send()
           }}
           placeholder="ask the analyst..."
