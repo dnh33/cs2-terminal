@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { callClaudeStream, ANALYST_SYSTEM } from '../lib/api'
 import { AnalysisOutput } from './AnalysisOutput'
 import { StatusDot } from './Atoms'
@@ -53,11 +53,17 @@ interface ChatProps {
   marketContext: string
 }
 
-export function ChatPanel({ marketContext }: ChatProps) {
+export interface ChatPanelHandle {
+  focusInput: () => void
+}
+
+export const ChatPanel = forwardRef<ChatPanelHandle, ChatProps>(function ChatPanel({ marketContext }, ref) {
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  useImperativeHandle(ref, () => ({ focusInput() { inputRef.current?.focus() } }))
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -159,6 +165,7 @@ export function ChatPanel({ marketContext }: ChatProps) {
       <div className="border-t border-line px-3.5 py-2.5 flex gap-2 items-center bg-bg-2">
         <span className="text-accent-sel text-[14px]">›</span>
         <input
+          ref={inputRef}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => {
@@ -180,4 +187,4 @@ export function ChatPanel({ marketContext }: ChatProps) {
       </div>
     </div>
   )
-}
+})

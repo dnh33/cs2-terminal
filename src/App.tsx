@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMarketData } from './hooks/useMarketData'
 import { Header } from './components/Header'
 import { Ticker } from './components/Ticker'
@@ -6,7 +6,7 @@ import { MarketStats } from './components/MarketStats'
 import { CaseTable } from './components/CaseTable'
 import type { SortState, FilterState, ItemFull } from './components/CaseTable'
 import { DetailPanel } from './components/DetailPanel'
-import { MarketScanPanel, ChatPanel } from './components/Panels'
+import { MarketScanPanel, ChatPanel, type ChatPanelHandle } from './components/Panels'
 import { PoolDistribution, VolumePriceScatter } from './components/Charts'
 import { MoversPanel } from './components/MoversPanel'
 import { LoginScreen } from './components/LoginScreen'
@@ -200,6 +200,7 @@ function AppDashboard({ onLogout }: DashboardProps) {
   // we don't fan out 41× /api/items/medians calls on dashboard load.
   const [itemMedians, setItemMedians] = useState<Record<string, ItemMediansResponse>>({})
   const [cmdkOpen, setCmdkOpen] = useState(false)
+  const chatRef = useRef<ChatPanelHandle>(null)
 
   const selected = items.find(i => i.id === selectedId)
 
@@ -550,7 +551,8 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
 
   useGlobalKeystroke({
     onCmdK: () => setCmdkOpen((o) => !o),
-    // onSlash + onEsc wire in T34 + T36 respectively
+    onSlash: () => chatRef.current?.focusInput(),
+    // onEsc wires in T36
   })
 
   return (
@@ -649,7 +651,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
             </div>
           </div>
 
-          <ChatPanel marketContext={marketContext} />
+          <ChatPanel ref={chatRef} marketContext={marketContext} />
         </div>
       )}
         </main>
