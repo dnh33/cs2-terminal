@@ -8,6 +8,7 @@ interface Props {
   fetching: boolean
   stats: MarketStats | null
   onLogout?: () => void
+  onOpenCmdK?: () => void
 }
 
 function formatAge(seconds: number): string {
@@ -17,7 +18,7 @@ function formatAge(seconds: number): string {
   return `${Math.floor(seconds / 86400)}d ago`
 }
 
-export function Header({ fetching, stats, onLogout }: Props) {
+export function Header({ fetching, stats, onLogout, onOpenCmdK }: Props) {
   const lastSnap = stats?.last_snapshot_at
   const ageSec = lastSnap ? Math.floor(Date.now() / 1000) - lastSnap : null
   const stale = ageSec != null && ageSec > 7200
@@ -40,6 +41,20 @@ export function Header({ fetching, stats, onLogout }: Props) {
           </div>
         </div>
         <div data-test="header-controls" className="hidden md:flex items-center gap-3 text-ink-2">
+          {onOpenCmdK && (
+            <>
+              <button
+                type="button"
+                onClick={onOpenCmdK}
+                className="t-label text-ink-2 hover:text-ink-0 px-2 py-1 border border-line-bright"
+                title="Open command palette"
+                aria-label="Open command palette"
+              >
+                ⌘K
+              </button>
+              <span className="text-ink-3">·</span>
+            </>
+          )}
           <PaletteSwitch />
           <span className="text-ink-3">·</span>
           <span className="t-data text-accent-data">claude-sonnet-4.5</span>
@@ -61,6 +76,17 @@ export function Header({ fetching, stats, onLogout }: Props) {
         </div>
         {/* Mobile cluster — sign-out only, plus a slot for the future ⌘K hint button (T36) */}
         <div className="flex md:hidden items-center gap-3 text-ink-2">
+          {onOpenCmdK && (
+            <button
+              type="button"
+              onClick={onOpenCmdK}
+              className="t-label text-ink-2 hover:text-ink-0 px-2 py-1 border border-line-bright"
+              title="Open command palette"
+              aria-label="Open command palette"
+            >
+              ⌘K
+            </button>
+          )}
           {onLogout && (
             <button
               type="button"

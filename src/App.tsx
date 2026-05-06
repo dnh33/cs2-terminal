@@ -13,6 +13,8 @@ import { LoginScreen } from './components/LoginScreen'
 import { SkipLink } from './components/primitives/SkipLink'
 import { ErrorBoundary } from './components/primitives/ErrorBoundary'
 import { Banner } from './components/primitives/Banner'
+import { CmdK, type CmdKItem } from './components/CmdK'
+import { useGlobalKeystroke } from './lib/useGlobalKeystroke'
 import { POOL_RANK } from './lib/cases'
 import {
   callClaudeStream,
@@ -197,6 +199,7 @@ function AppDashboard({ onLogout }: DashboardProps) {
   // Per-case item-median cache. Populated lazily when a case is selected so
   // we don't fan out 41× /api/items/medians calls on dashboard load.
   const [itemMedians, setItemMedians] = useState<Record<string, ItemMediansResponse>>({})
+  const [cmdkOpen, setCmdkOpen] = useState(false)
 
   const selected = items.find(i => i.id === selectedId)
 
@@ -470,11 +473,91 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
 
   const hasPrice = items.some(i => i.price)
 
+  // Earliest snapshot age (in seconds) across loaded items — feeds MoversPanel
+  // 24H gating. T39 added the prop; T33 wires the value. NOTE: prop semantics
+  // are seconds (see MoversPanel.tsx:18-19 — "<86400 the 24H window is hidden"),
+  // not days. Plan 3 task description said "days" — taking the working
+  // unit-of-prop here so the gating actually fires correctly.
+  const earliestSnapshotAge = useMemo<number | undefined>(() => {
+    const now = Date.now()
+    let earliest: number | null = null
+    for (const it of items) {
+      for (const h of it.history || []) {
+        const t = new Date(h.date).getTime()
+        if (Number.isFinite(t) && (earliest === null || t < earliest)) earliest = t
+      }
+    }
+    if (earliest === null) return undefined
+    return Math.max(0, Math.floor((now - earliest) / 1000))
+  }, [items])
+
+  const cmdkItems = useMemo<CmdKItem[]>(() => {
+    const caseItems: CmdKItem[] = items.map((it) => ({
+      id: `case:${it.id}`,
+      section: 'cases',
+      label: it.name,
+      tier: it.pool,
+      meta: it.pool.toUpperCase().slice(0, 4),
+    }))
+    const panelItems: CmdKItem[] = [
+      { id: 'panel:movers', section: 'panels', label: 'Movers' },
+      { id: 'panel:scan', section: 'panels', label: 'Market Scan' },
+      { id: 'panel:detail', section: 'panels', label: 'Detail' },
+    ]
+    const actionItems: CmdKItem[] = [
+      { id: 'action:scan', section: 'action', label: 'Run Market Scan' },
+      { id: 'action:analyze', section: 'action', label: 'Run Analysis on Selected Case' },
+      { id: 'action:refresh', section: 'action', label: 'Refresh Feed' },
+      { id: 'action:logout', section: 'action', label: 'Sign Out' },
+    ]
+    const toggleItems: CmdKItem[] = [
+      { id: 'toggle:palette', section: 'toggle', label: 'Cycle Palette Mode (STD/AMBER/GREEN)' },
+    ]
+    return [...caseItems, ...panelItems, ...actionItems, ...toggleItems]
+  }, [items])
+
+  function handleCmdKActivate(item: CmdKItem) {
+    setCmdkOpen(false)
+    if (item.id.startsWith('case:')) {
+      setSelectedId(item.id.slice('case:'.length))
+      return
+    }
+    if (item.id === 'panel:movers') {
+      document.querySelector('[data-test="movers-panel"]')?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+    if (item.id === 'panel:scan') {
+      document.querySelector('[data-test="market-scan-panel"]')?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+    if (item.id === 'panel:detail') {
+      if (selected) document.querySelector('[data-test="detail-panel"]')?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+    if (item.id === 'action:scan') { runScan(); return }
+    if (item.id === 'action:analyze') { if (selected) analyzeCase(); return }
+    if (item.id === 'action:refresh') { fetchAll(true); return }
+    if (item.id === 'action:logout') { onLogout(); return }
+    if (item.id === 'toggle:palette') {
+      const html = document.documentElement
+      const cur = html.getAttribute('data-palette') ?? 'std'
+      const next = cur === 'std' ? 'amber' : cur === 'amber' ? 'green' : 'std'
+      html.setAttribute('data-palette', next)
+      try { localStorage.setItem('cs-palette', next) } catch { /* ignore */ }
+      return
+    }
+  }
+
+  useGlobalKeystroke({
+    onCmdK: () => setCmdkOpen((o) => !o),
+    // onSlash + onEsc wire in T34 + T36 respectively
+  })
+
   return (
     <>
       <SkipLink targetId="main" />
       <div className="min-h-screen flex flex-col">
-        <Header fetching={fetching} stats={stats} onLogout={onLogout} />
+        <Header fetching={fetching} stats={stats} onLogout={onLogout} onOpenCmdK={() => setCmdkOpen(true)} />
         {hasPrice && <Ticker rows={tickerRows} />}
         {hasPrice && <MarketStats items={items} />}
 
@@ -525,10 +608,12 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
 
       {hasPrice && (
         <div className="px-6 py-5">
-          <MarketScanPanel items={items} onScan={runScan} scan={scan} scanning={scanning} error={scanError} />
+          <div data-test="market-scan-panel">
+            <MarketScanPanel items={items} onScan={runScan} scan={scan} scanning={scanning} error={scanError} />
+          </div>
 
-          <div className="mb-4">
-            <MoversPanel onSelect={setSelectedId} />
+          <div className="mb-4" data-test="movers-panel">
+            <MoversPanel onSelect={setSelectedId} earliestSnapshotAge={earliestSnapshotAge} />
           </div>
 
           <div data-test="chart-row" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -550,7 +635,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
               setFilter={setFilter}
               loading={fetching}
             />
-            <div className="bg-bg-1 border border-line">
+            <div data-test="detail-panel" className="bg-bg-1 border border-line">
               <DetailPanel
                 item={selected}
                 onAnalyze={analyzeCase}
@@ -590,6 +675,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
           )}
         </footer>
       </div>
+      <CmdK open={cmdkOpen} onClose={() => setCmdkOpen(false)} items={cmdkItems} onActivate={handleCmdKActivate} />
     </>
   )
 }
