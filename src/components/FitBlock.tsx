@@ -62,14 +62,26 @@ export function FitBlock({ result }: Props) {
         <div className="space-y-2">
           {ROW_LABELS.map((row) => {
             const c: FitComponent = result.components[row.key]
+            const score = Math.round(c.score)
+            const median = (c as FitComponent & { pool_median?: number }).pool_median
+            const tooltip = insufficient
+              ? `${row.label}: insufficient history`
+              : typeof median === 'number'
+                ? `${row.label}: ${score}/100 — pool median ${Math.round(median)}/100`
+                : `${row.label}: ${score}/100`
             return (
-              <div key={row.key} className="grid items-center gap-2" style={{ gridTemplateColumns: '72px 1fr 36px' }}>
-                <div className="text-[10px] text-ink-2 tracking-[0.15em] font-mono">{row.label}</div>
+              <div
+                key={row.key}
+                className="grid items-center gap-2"
+                style={{ gridTemplateColumns: '72px 1fr 36px' }}
+                title={tooltip}
+              >
+                <div className="text-[10px] text-ink-2 tracking-[0.15em] font-mono" title={tooltip}>{row.label}</div>
                 {insufficient
                   ? <div className="h-1 bg-bg-3" aria-hidden="true" />
                   : <Bar value={c.score} />}
                 <div className="text-[10px] text-ink-1 tabular-nums text-right font-mono">
-                  {insufficient ? '—' : Math.round(c.score)}
+                  {insufficient ? '—' : score}
                 </div>
               </div>
             )

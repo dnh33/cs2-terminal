@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { axe } from 'jest-axe'
 import { FitBlock } from '../FitBlock'
 import type { FitResult } from '../../lib/fitScore'
 
@@ -52,6 +53,28 @@ describe('FitBlock', () => {
     r.status = 'insufficient_history'
     render(<FitBlock result={r} />)
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(6)
+  })
+
+  it('renders title tooltips on each of the 5 active component rows', () => {
+    render(<FitBlock result={fixtureOk(73)} />)
+    const expectations: Array<[string, number]> = [
+      ['LIQ', 62],
+      ['MOM', 78],
+      ['SUPPLY', 91],
+      ['CONTENT', 75],
+      ['UNBOX EV', 52],
+      ['CROWDING', 68],
+    ]
+    for (const [label, score] of expectations) {
+      const labelEl = screen.getByText(label)
+      expect(labelEl).toHaveAttribute('title', `${label}: ${score}/100`)
+    }
+  })
+
+  it('passes axe with 0 violations', async () => {
+    const { container } = render(<FitBlock result={fixtureOk(73)} />)
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
   })
 
   it('hides FIT block entirely when stale_data', () => {
