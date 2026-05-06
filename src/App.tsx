@@ -425,12 +425,15 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
             <MoversPanel onSelect={setSelectedId} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div data-test="chart-row" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <PoolDistribution items={items} />
             <VolumePriceScatter items={items} onSelect={setSelectedId} selectedId={selectedId} />
           </div>
 
-          <div className="grid gap-4 mb-4" style={{ gridTemplateColumns: '1.4fr 1fr' }}>
+          <div
+            data-test="table-detail-grid"
+            className="grid gap-4 mb-4 grid-cols-1 md:grid-cols-[1.4fr_1fr]"
+          >
             <CaseTable
               items={filteredSorted}
               selectedId={selectedId}
