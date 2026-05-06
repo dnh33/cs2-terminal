@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { render, within } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, within, fireEvent } from '@testing-library/react'
 import { DetailPanel } from '../DetailPanel'
 import type { ItemFull } from '../CaseTable'
 import type { FitResult } from '../../lib/fitScore'
@@ -126,5 +126,48 @@ describe('DetailPanel — from-scan pill (T36)', () => {
     )
     const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
     expect(within(desktop).queryByText(/from this scan/i)).not.toBeInTheDocument()
+  })
+})
+
+// P3-T38: Devil's Advocate button. Per T27, both desktop and mobile mounts
+// render simultaneously in jsdom — scope to the desktop subtree to avoid
+// duplicate-match errors (deviation from plan T38 step 1, mirrors T30's pattern).
+describe('DetailPanel — Devil\'s Advocate', () => {
+  it('renders the DEVIL\'S ADVOCATE button when analysis is present', () => {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis="some prose" analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+        onDevilsAdvocate={() => {}}
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    expect(within(desktop).getByRole('button', { name: /devil/i })).toBeInTheDocument()
+  })
+
+  it('calls onDevilsAdvocate when clicked', () => {
+    const fn = vi.fn()
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis="prose" analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+        onDevilsAdvocate={fn}
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    fireEvent.click(within(desktop).getByRole('button', { name: /devil/i }))
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  it('does NOT render Devil\'s Advocate button when analysis is empty/null', () => {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+        onDevilsAdvocate={() => {}}
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    expect(within(desktop).queryByRole('button', { name: /devil/i })).not.toBeInTheDocument()
   })
 })

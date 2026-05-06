@@ -406,6 +406,51 @@ ${historyBlock}`
     }
   }
 
+  /**
+   * P3-T38: Devil's Advocate — re-run analyzeCase with a flipped framing
+   * prompt ("argue the OPPOSITE side"). Cached under a distinct localStorage
+   * key so the user can flip back to the regular analysis without losing it.
+   */
+  async function analyzeCaseDevilsAdvocate() {
+    if (!selected || !selected.price || !selected.metrics) return
+    setAnalyzing(true)
+    setAnalysisError(null)
+    setAnalysis('')
+    try {
+      const realHistory = (selected.history || []).filter(h => h.source === 'real')
+      const historyBlock = formatHistoryBlock(realHistory)
+      const userMsg = `Argue the OPPOSITE side of your default reasoning on this case.
+If your instinct is LONG, build the AVOID case. If AVOID, build the LONG case.
+Be honest if the contrarian case is weak — say so plainly.
+
+FOCUS: ${selected.name}
+Pool: ${selected.pool}
+Released: ${selected.released} (${selected.metrics.ageYears.toFixed(1)}y old)
+Lowest: $${selected.price.lowest.toFixed(2)} | Median: $${(selected.price.median || 0).toFixed(2)}
+Volume: ${selected.price.volume}
+Notable: ${selected.notable}
+
+=== TIME SERIES (real D1 snapshots, this case only) ===
+${historyBlock}`
+      let full = ''
+      await callClaudeStream(
+        {
+          messages: [{ role: 'user', content: userMsg }],
+          system: ANALYST_SYSTEM + '\n\n=== FULL MARKET CONTEXT ===\n' + marketContext,
+          cache_system_prompt: true,
+        },
+        delta => { full += delta; setAnalysis(full) },
+      )
+      // Cache under a distinct key — devil's advocate output ≠ regular analysis
+      const snapshotKey = stats?.last_snapshot_at ?? 0
+      try { localStorage.setItem(`cs-analysis-devil:v2:${selected.id}:${snapshotKey}`, full) } catch { /* ignore */ }
+    } catch (e: any) {
+      setAnalysisError(e.message)
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
   async function runScan() {
     setScanning(true)
     setScanError(null)
@@ -664,6 +709,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
                 peers={peerCandidates}
                 onSelectPeer={(peerId) => setSelectedId(peerId)}
                 fromScan={lastSelectionSource === 'scan'}
+                onDevilsAdvocate={analyzeCaseDevilsAdvocate}
               />
             </div>
           </div>

@@ -42,11 +42,17 @@ interface Props {
    * pass it remain valid (DetailPanel API stays the same per Plan 2 T27).
    */
   onClose?: () => void
+  /**
+   * P3-T38: re-run the analysis with reversed framing ("argue the OPPOSITE
+   * side"). Button only renders when an analysis already exists, so the
+   * empty state stays clean.
+   */
+  onDevilsAdvocate?: () => void
 }
 
 export function DetailPanel({
   item, onAnalyze, analysis, analyzing, error,
-  fit, peers, onSelectPeer, verdict, confidence, fromScan, onClose,
+  fit, peers, onSelectPeer, verdict, confidence, fromScan, onClose, onDevilsAdvocate,
 }: Props) {
   if (!item) {
     return (
@@ -141,17 +147,29 @@ export function DetailPanel({
       <div className="px-5 py-4">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold m-0">// LLM-NATIVE THESIS</h3>
-          <button
-            onClick={onAnalyze}
-            disabled={analyzing}
-            className={`text-[10px] tracking-[0.15em] px-3.5 py-1.5 font-bold ${
-              analyzing
-                ? 'bg-bg-3 text-ink-2 border border-line-bright cursor-not-allowed'
-                : 'bg-accent-sel text-bg-0 border border-accent-sel hover:opacity-90'
-            }`}
-          >
-            {analyzing ? 'ANALYZING...' : '▸ RUN ANALYSIS'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={onAnalyze}
+              disabled={analyzing}
+              className={`text-[10px] tracking-[0.15em] px-3.5 py-1.5 font-bold ${
+                analyzing
+                  ? 'bg-bg-3 text-ink-2 border border-line-bright cursor-not-allowed'
+                  : 'bg-accent-sel text-bg-0 border border-accent-sel hover:opacity-90'
+              }`}
+            >
+              {analyzing ? 'ANALYZING...' : '▸ RUN ANALYSIS'}
+            </button>
+            {analysis && onDevilsAdvocate && (
+              <button
+                onClick={onDevilsAdvocate}
+                disabled={analyzing}
+                className="text-[10px] tracking-[0.15em] px-3.5 py-1.5 font-bold border border-state-warn text-state-warn hover:bg-state-warn/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Re-run with reversed framing"
+              >
+                ⚖ DEVIL'S ADVOCATE
+              </button>
+            )}
+          </div>
         </div>
         {error && <Banner variant="error" className="mb-3">Analysis failed. {error}</Banner>}
         {analysis && <AnalysisOutput text={analysis} />}
