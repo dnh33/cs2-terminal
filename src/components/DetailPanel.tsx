@@ -2,6 +2,7 @@ import { PoolBadge } from './Atoms'
 import { PriceChart } from './Charts'
 import { AnalysisOutput } from './AnalysisOutput'
 import { Banner } from './primitives/Banner'
+import { Drawer } from './primitives/Drawer'
 import { FitBlock } from './FitBlock'
 import { PeersList } from './PeersList'
 import { RoiCalculator } from './RoiCalculator'
@@ -23,11 +24,17 @@ interface Props {
   fit?: FitResult
   peers?: PeerCandidate[]
   onSelectPeer?: (caseId: string) => void
+  /**
+   * Optional close handler used by the mobile Drawer wrapper (Esc / backdrop).
+   * Desktop ignores it. Defaults to a noop so existing call-sites that don't
+   * pass it remain valid (DetailPanel API stays the same per Plan 2 T27).
+   */
+  onClose?: () => void
 }
 
 export function DetailPanel({
   item, onAnalyze, analysis, analyzing, error,
-  fit, peers, onSelectPeer,
+  fit, peers, onSelectPeer, onClose,
 }: Props) {
   if (!item) {
     return (
@@ -38,7 +45,7 @@ export function DetailPanel({
   }
   const m = item.metrics, p = item.price
 
-  return (
+  const body = (
     <div className="animate-fade-up">
       {/* Header */}
       <div
@@ -138,5 +145,21 @@ export function DetailPanel({
 
       {/* Decision Log placeholder — wired in T30 */}
     </div>
+  )
+
+  // P2-T27: render inline body on desktop (md+); on mobile (<md) the same body
+  // is wrapped in a full-screen Drawer that opens whenever an item is selected.
+  // jsdom can't run media queries, so tests assert class presence per P0-5.
+  return (
+    <>
+      <div data-test="detail-desktop" className="hidden md:block">
+        {body}
+      </div>
+      <div data-test="detail-mobile" className="md:hidden">
+        <Drawer open={!!item} onClose={onClose ?? (() => {})} ariaLabel="Case detail">
+          {body}
+        </Drawer>
+      </div>
+    </>
   )
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, within } from '@testing-library/react'
 import { DetailPanel } from '../DetailPanel'
 import type { ItemFull } from '../CaseTable'
 import type { FitResult } from '../../lib/fitScore'
@@ -27,56 +27,45 @@ const fitOk: FitResult = {
   inputs_hash: 'abc', as_of: 0, snapshot_at: 0, pool_size: 41,
 }
 
+// Per P2-T27, DetailPanel renders both a desktop inline wrapper and a mobile
+// Drawer wrapper; jsdom mounts both simultaneously. Scope queries to the
+// desktop wrapper so we assert on a single subtree.
+function renderDesktop() {
+  const { container } = render(
+    <DetailPanel
+      item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
+      fit={fitOk} peers={[]} onSelectPeer={() => {}}
+    />,
+  )
+  const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+  return { container, desktop }
+}
+
 describe('DetailPanel reshape', () => {
   it('renders FIT block when fit prop is provided', () => {
-    render(
-      <DetailPanel
-        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
-        fit={fitOk} peers={[]} onSelectPeer={() => {}}
-      />,
-    )
-    expect(screen.getByText('// FIT')).toBeInTheDocument()
+    const { desktop } = renderDesktop()
+    expect(within(desktop).getByText('// FIT')).toBeInTheDocument()
   })
 
   it('renders PEERS section', () => {
-    render(
-      <DetailPanel
-        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
-        fit={fitOk} peers={[]} onSelectPeer={() => {}}
-      />,
-    )
-    expect(screen.getByText('// PEERS')).toBeInTheDocument()
+    const { desktop } = renderDesktop()
+    expect(within(desktop).getByText('// PEERS')).toBeInTheDocument()
   })
 
   it('renders ROI calc', () => {
-    render(
-      <DetailPanel
-        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
-        fit={fitOk} peers={[]} onSelectPeer={() => {}}
-      />,
-    )
-    expect(screen.getByText('// ROI CALC')).toBeInTheDocument()
+    const { desktop } = renderDesktop()
+    expect(within(desktop).getByText('// ROI CALC')).toBeInTheDocument()
   })
 
   it('does NOT render legacy SIGNALS metric bars', () => {
-    render(
-      <DetailPanel
-        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
-        fit={fitOk} peers={[]} onSelectPeer={() => {}}
-      />,
-    )
-    expect(screen.queryByText('// SIGNALS')).not.toBeInTheDocument()
-    expect(screen.queryByText(/POOL APPRECIATION BIAS/)).not.toBeInTheDocument()
+    const { desktop } = renderDesktop()
+    expect(within(desktop).queryByText('// SIGNALS')).not.toBeInTheDocument()
+    expect(within(desktop).queryByText(/POOL APPRECIATION BIAS/)).not.toBeInTheDocument()
   })
 
   it('vertical order: FIT before chart before PEERS — wait, FIT before PEERS before chart', () => {
-    const { container } = render(
-      <DetailPanel
-        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
-        fit={fitOk} peers={[]} onSelectPeer={() => {}}
-      />,
-    )
-    const text = container.textContent ?? ''
+    const { desktop } = renderDesktop()
+    const text = desktop.textContent ?? ''
     const fitIdx = text.indexOf('// FIT')
     const peersIdx = text.indexOf('// PEERS')
     const chartIdx = text.indexOf('// PRICE TRAJECTORY')

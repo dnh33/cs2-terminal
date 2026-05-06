@@ -38,7 +38,9 @@ describe('AppDashboard URL state', () => {
     render(<Mod.default />)
     await waitFor(() => expect(screen.queryByText(/SELECT A CASE/i)).not.toBeInTheDocument())
     // The DetailPanel header includes the case name in uppercase
-    expect(screen.getByText(/GLOVE CASE/)).toBeInTheDocument()
+    // Per P2-T27, DetailPanel renders both desktop + mobile wrappers in jsdom,
+    // so the case name appears in both copies.
+    expect(screen.getAllByText(/GLOVE CASE/).length).toBeGreaterThan(0)
   })
 
   it('updates URL when a case is selected', async () => {
