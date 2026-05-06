@@ -51,6 +51,10 @@ export interface Env {
   // Generate with: openssl rand -hex 32
   // (or any online random-string generator, or just type 64 random characters)
   AUTH_SESSION_SECRET?: string
+  // ─── Analytics Engine — FIT telemetry ─────────────────────────────────────
+  // One data point per computed FitResult. Calibration joins these against
+  // future price snapshots to verify the algorithm's forward-return claims.
+  FIT_TELEMETRY: AnalyticsEngineDataset
 }
 
 interface SteamPriceResponse {
@@ -100,7 +104,30 @@ interface ChatRequest {
    * identical requests like the Market Scan endpoint.
    */
   cache_response_ttl?: number          // seconds, 1–86400
+  /**
+   * Opt-in: ask the worker to inject a server-side sentinel-instruction into
+   * the system prompt that tells Claude to terminate with a JSON verdict tail
+   * after `\n[[CASE_SNIPER_VERDICT]]\n`. Streaming responses additionally emit
+   * an SSE `event: validated` or `event: invalid` line once the JSON tail is
+   * parsed server-side. Used by analyzeCase; ChatPanel/runScan leave it off.
+   */
+  structured?: boolean
 }
+
+// 25-character sentinel that marks the start of the JSON verdict tail in a
+// structured chat response. The exact byte sequence is contractually fixed —
+// frontend parsers and worker stream-side parsers both look for this literal.
+const CASE_SNIPER_VERDICT_SENTINEL = '\n[[CASE_SNIPER_VERDICT]]\n'
+
+// Sentinel-instruction injected server-side into the system prompt when the
+// caller passes `structured: true`. Server-injected so a malicious frontend
+// can't suppress it. Plan 3 flips the flag in analyzeCase.
+const SENTINEL_INSTRUCTION = `\n\n=== STRUCTURED VERDICT REQUIREMENT ===\n` +
+  `After your analysis prose, emit exactly the following 25-character sequence:\n` +
+  `\\n[[CASE_SNIPER_VERDICT]]\\n\n` +
+  `Then emit one JSON object on the next line matching:\n` +
+  `{"verdict":"LONG"|"FLAT"|"AVOID","confidence":0.0-1.0,"rationale":"<=280 chars","key_risks":["<=80 chars",...]}\n` +
+  `Use the 25-char sequence exactly once, never inside prose.`
 
 const STALE_THRESHOLD_SECONDS = 600              // refresh on-demand if >10min old
 const STEAM_RATE_LIMIT_BACKOFF_MS = 60_000        // wait on 429
@@ -790,6 +817,13 @@ async function callLLM(
   }
 
   const model = req.model || env.OPENROUTER_MODEL || DEFAULT_MODEL
+  // Server-side sentinel-instruction injection when structured output is
+  // requested. Mutating req.system before buildMessages keeps prompt-cache
+  // semantics intact (the cached prefix already includes the sentinel block
+  // for every structured call, identical bytes across requests).
+  if (req.structured) {
+    req = { ...req, system: req.system + SENTINEL_INSTRUCTION }
+  }
   const messages = buildMessages(req, model)
 
   // Build the chatRequest object only including parameters the user actually set —
@@ -852,6 +886,13 @@ async function callLLMStream(env: Env, req: ChatRequest): Promise<Response> {
   }
 
   const model = req.model || env.OPENROUTER_MODEL || DEFAULT_MODEL
+  // Same server-side sentinel injection as the non-streaming path. Done before
+  // buildMessages so the cached prefix (when cache_system_prompt is set) is
+  // identical between streaming and non-streaming structured calls.
+  const wantsStructured = req.structured === true
+  if (wantsStructured) {
+    req = { ...req, system: req.system + SENTINEL_INSTRUCTION }
+  }
   const messages = buildMessages(req, model)
 
   const chatRequest: Record<string, unknown> = {
@@ -890,10 +931,39 @@ async function callLLMStream(env: Env, req: ChatRequest): Promise<Response> {
   const encoder = new TextEncoder()
   const sseStream = new ReadableStream({
     async start(controller) {
+      // When `structured` was requested, accumulate the streamed text so we
+      // can detect the sentinel + parse the JSON tail server-side and emit
+      // a terminal SSE event (`event: validated` / `event: invalid`) the
+      // frontend can latch onto. Non-structured streams skip this entirely.
+      let accumulated = ''
       try {
         for await (const chunk of sdkStream) {
           // Forward as standard SSE: one JSON event per chunk, plus a [DONE] terminator.
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`))
+          if (wantsStructured) {
+            const delta = (chunk as any)?.choices?.[0]?.delta?.content
+            if (typeof delta === 'string' && delta.length > 0) accumulated += delta
+          }
+        }
+        if (wantsStructured) {
+          const idx = accumulated.indexOf(CASE_SNIPER_VERDICT_SENTINEL)
+          if (idx === -1) {
+            controller.enqueue(encoder.encode(
+              `event: invalid\ndata: ${JSON.stringify({ reason: 'sentinel_missing' })}\n\n`,
+            ))
+          } else {
+            const tail = accumulated.slice(idx + CASE_SNIPER_VERDICT_SENTINEL.length).trim()
+            try {
+              const parsed = JSON.parse(tail)
+              controller.enqueue(encoder.encode(
+                `event: validated\ndata: ${JSON.stringify(parsed)}\n\n`,
+              ))
+            } catch (err: any) {
+              controller.enqueue(encoder.encode(
+                `event: invalid\ndata: ${JSON.stringify({ reason: 'json_parse_error', message: err?.message ?? 'parse failed' })}\n\n`,
+              ))
+            }
+          }
         }
         controller.enqueue(encoder.encode(`data: [DONE]\n\n`))
       } catch (e: any) {
@@ -1170,6 +1240,46 @@ export default {
           { case_id: caseId, items: rows.results ?? [] },
           env,
         )
+      }
+
+      // /api/telemetry/fit — fire-and-forget telemetry from the frontend's
+      // computeFit() pipeline. One Analytics Engine data point per call.
+      // Calibration jobs join blobs[0] (case_id) against future price
+      // snapshots at T+30/90/180 to verify forward-return claims.
+      if (url.pathname === '/api/telemetry/fit' && request.method === 'POST') {
+        const body = await request.json().catch(() => null) as null | {
+          case_id?: string; weights_version?: string; algo_version?: string
+          status?: string; confidence?: string
+          fit?: number; liquidity?: number; momentum?: number; supply?: number
+          content?: number; unbox_ev?: number; crowding?: number
+        }
+        if (!body || !body.case_id) {
+          return jsonResponse({ error: 'invalid payload' }, env, 400)
+        }
+        try {
+          env.FIT_TELEMETRY.writeDataPoint({
+            blobs: [
+              body.case_id ?? '',
+              body.weights_version ?? '',
+              body.algo_version ?? '',
+              body.status ?? '',
+              body.confidence ?? '',
+            ],
+            doubles: [
+              body.fit ?? 0,
+              body.liquidity ?? 0,
+              body.momentum ?? 0,
+              body.supply ?? 0,
+              body.content ?? 0,
+              body.unbox_ev ?? 0,
+              body.crowding ?? 0,
+            ],
+            indexes: [body.case_id ?? ''],
+          })
+          return jsonResponse({ ok: true }, env)
+        } catch (e: any) {
+          return jsonResponse({ ok: false, error: e?.message ?? 'ae write failed' }, env, 500)
+        }
       }
 
       // Stats

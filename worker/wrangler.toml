@@ -60,6 +60,13 @@ crons = [
   "50 4,16 * * *",      # Low-tier item sweep twice daily at 04:50 and 16:50
 ]
 
+# Cloudflare Analytics Engine binding for FIT telemetry. Each computed
+# FitResult writes one data point; calibration jobs join these blobs against
+# future price snapshots at T+30/90/180 to verify forward-return.
+[[analytics_engine_datasets]]
+binding = "FIT_TELEMETRY"
+dataset = "fit_events"
+
 # Secrets (set via `wrangler secret put <NAME>`):
 #   OPENROUTER_API_KEY   — required; get one at https://openrouter.ai/keys
 #   ADMIN_TOKEN          — gates /admin/* endpoints; pick any random string
