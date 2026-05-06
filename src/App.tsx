@@ -28,9 +28,11 @@ import {
   checkAuth,
   logout,
   fetchMovers,
+  fetchCronRecent,
   getStoredToken,
 } from './lib/api'
-import type { MoversResponse } from './lib/api'
+import type { MoversResponse, CronRecentRun } from './lib/api'
+import { SystemStatus } from './components/SystemStatus'
 import { streamAnalysis, type AnalysisVerdict } from './lib/streamAnalysis'
 import { computeDivergence } from './lib/divergence'
 import type { PricePoint } from './lib/metrics'
@@ -228,6 +230,19 @@ function AppDashboard({ onLogout }: DashboardProps) {
   // window-pill behavior stay untouched). The chart uses its own 30D window.
   const [moversResponse, setMoversResponse] = useState<MoversResponse | null>(null)
   const moversDays = 30
+  // T12: SystemStatus footer — last 24 case-sweep runs, refreshed every 60s.
+  const [cronRecent, setCronRecent] = useState<CronRecentRun[]>([])
+  useEffect(() => {
+    let alive = true
+    const tick = () => {
+      fetchCronRecent(24)
+        .then(r => { if (alive) setCronRecent(r.runs) })
+        .catch(() => { /* leave previous bars */ })
+    }
+    tick()
+    const int = setInterval(tick, 60_000)
+    return () => { alive = false; clearInterval(int) }
+  }, [])
   useEffect(() => {
     let cancel = false
     fetchMovers(moversDays)
@@ -867,6 +882,11 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
               )}
             </div>
           )}
+          {/* T12: 24-bar case-sweep sparkline (60s polling). */}
+          <div className="mt-3 flex items-center gap-3 text-[10px] text-ink-3 tracking-[0.15em]">
+            <span>// CRON × 24</span>
+            <SystemStatus runs={cronRecent} />
+          </div>
         </footer>
       </div>
       <CmdK open={cmdkOpen} onClose={() => setCmdkOpen(false)} items={cmdkItems} onActivate={handleCmdKActivate} />
