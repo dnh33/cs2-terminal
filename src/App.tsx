@@ -23,6 +23,7 @@ import {
 } from './lib/api'
 import type { PricePoint } from './lib/metrics'
 import { saveAnalysis, loadAnalysis, saveScan, loadLastScan } from './lib/persist'
+import { useSelectedCase } from './lib/useSelectedCase'
 import { C } from './lib/theme'
 
 function sortValue(item: ItemFull, key: SortState['key']): number | string | undefined {
@@ -164,7 +165,12 @@ function formatDeltaTable(m7: MoverLite[], m30: MoverLite[], m90: MoverLite[]): 
 function AppDashboard({ onLogout }: DashboardProps) {
   const { items, fetching, lastUpdated, fetchError, stats, fetchAll, loadDemo, loadRealHistory } = useMarketData()
 
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [urlSelectedId, setSelectedId] = useSelectedCase()
+  // Validate the URL value against the loaded items list. A garbage ?case=
+  // value (typo, deleted case, attacker probe) would otherwise trigger
+  // fetchHistory + analyzeCase + computeFit on a non-existent ID and
+  // pollute caches / fire 4xx history fetches.
+  const selectedId = urlSelectedId && items.some(i => i.id === urlSelectedId) ? urlSelectedId : null
   const [analysis, setAnalysis] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
