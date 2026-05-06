@@ -6,7 +6,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "build": "wrangler deploy --dry-run --outdir=dist",
-    "tail": "wrangler tail"
+    "tail": "wrangler tail",
+    "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "@openrouter/sdk": "0.12.24"
@@ -14,6 +15,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250109.0",
     "typescript": "^5.7.2",
+    "vitest": "^4.1.5",
     "wrangler": "^3.99.0"
   }
 }
