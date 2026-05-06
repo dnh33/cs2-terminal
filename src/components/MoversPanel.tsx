@@ -13,7 +13,13 @@ const WINDOWS: { label: string; days: number }[] = [
   { label: '90D', days: 90 },
 ]
 
-export function MoversPanel({ onSelect }: { onSelect: (id: string) => void }) {
+interface MoversPanelProps {
+  onSelect: (id: string) => void
+  /** Latest snapshot age in seconds — when <86400 the 24H window is hidden */
+  earliestSnapshotAge?: number
+}
+
+export function MoversPanel({ onSelect, earliestSnapshotAge }: MoversPanelProps) {
   const [days, setDays] = useState(7)
   const [movers, setMovers] = useState<MoverRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -33,6 +39,9 @@ export function MoversPanel({ onSelect }: { onSelect: (id: string) => void }) {
   const gainers = movers.filter(m => m.pct_change > 0).slice(0, 5)
   const losers  = movers.filter(m => m.pct_change < 0).slice(0, 5)
   const enoughHistory = movers.length > 0
+  const visibleWindows = (earliestSnapshotAge !== undefined && earliestSnapshotAge < 86400)
+    ? WINDOWS.filter(w => w.days !== 1)
+    : WINDOWS
 
   return (
     <div className="bg-bg-1 border border-line" role="grid" aria-label="Top movers">
@@ -42,7 +51,7 @@ export function MoversPanel({ onSelect }: { onSelect: (id: string) => void }) {
           <span className="text-[10px] text-ink-3 ml-2">real Δ from D1 history</span>
         </div>
         <div className="flex gap-1">
-          {WINDOWS.map(w => (
+          {visibleWindows.map(w => (
             <button
               key={w.days}
               onClick={() => setDays(w.days)}
@@ -89,26 +98,41 @@ function MoverList({
       {rows.length === 0 ? (
         <div className="p-4 text-[11px] text-ink-3 tracking-[0.1em]">// none in window</div>
       ) : (
-        rows.map(r => (
-          <KbdRow
-            key={r.id}
-            onActivate={() => onSelect(r.id)}
-            selected={false}
-            aria-label={`${r.name}, ${r.pct_change > 0 ? 'up' : 'down'} ${Math.abs(r.pct_change).toFixed(1)} percent, $${r.last_price.toFixed(2)}`}
-            className="flex items-center justify-between px-4 py-2 border-b border-line hover:bg-white/[0.02] cursor-pointer"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <PoolBadge pool={r.pool} />
-              <div className="min-w-0">
-                <div className="text-[12px] text-ink-0 truncate">{r.name}</div>
-                <div className="text-[10px] text-ink-2">${r.last_price.toFixed(2)} from ${r.first_price.toFixed(2)}</div>
+        rows.map(r => {
+          const vol = (r as MoverRow & { last_volume?: number }).last_volume
+          const hasVol = typeof vol === 'number' && Number.isFinite(vol)
+          const volColor = hasVol
+            ? (vol! > 1000 ? 'var(--delta-up)' : vol! > 100 ? 'var(--ink-1)' : 'var(--ink-3)')
+            : 'var(--ink-3)'
+          return (
+            <KbdRow
+              key={r.id}
+              onActivate={() => onSelect(r.id)}
+              selected={false}
+              aria-label={`${r.name}, ${r.pct_change > 0 ? 'up' : 'down'} ${Math.abs(r.pct_change).toFixed(1)} percent, $${r.last_price.toFixed(2)}`}
+              className="flex items-center justify-between px-4 py-2 border-b border-line hover:bg-white/[0.02] cursor-pointer"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <PoolBadge pool={r.pool} />
+                <div className="min-w-0">
+                  <div className="text-[12px] text-ink-0 truncate">{r.name}</div>
+                  <div className="text-[10px] text-ink-2">${r.last_price.toFixed(2)} from ${r.first_price.toFixed(2)}</div>
+                </div>
               </div>
-            </div>
-            <div className="font-display text-[18px] shrink-0" style={{ color: accent }}>
-              {r.pct_change > 0 ? '+' : ''}{r.pct_change.toFixed(1)}%
-            </div>
-          </KbdRow>
-        ))
+              <div
+                className="text-[10px] tabular-nums shrink-0 mr-2 text-right"
+                data-testid="mover-row-volume"
+                style={{ color: volColor }}
+              >
+                {hasVol ? vol!.toLocaleString('en-US') : '—'}
+                <div className="text-[8px] text-ink-3 tracking-[0.15em] uppercase">vol/24h</div>
+              </div>
+              <div className="font-display text-[18px] shrink-0" style={{ color: accent }}>
+                {r.pct_change > 0 ? '+' : ''}{r.pct_change.toFixed(1)}%
+              </div>
+            </KbdRow>
+          )
+        })
       )}
     </div>
   )
