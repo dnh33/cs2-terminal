@@ -20,11 +20,26 @@ import {
   checkAuth,
   logout,
   fetchMovers,
+  getStoredToken,
 } from './lib/api'
 import type { PricePoint } from './lib/metrics'
 import { saveAnalysis, loadAnalysis, saveScan, loadLastScan } from './lib/persist'
 import { useSelectedCase } from './lib/useSelectedCase'
 import { C } from './lib/theme'
+import { computeFit, type FitResult } from './lib/fitScore'
+import { fetchItemMedians, type ItemMediansResponse } from './lib/itemMedians'
+
+// Worker URL precedence mirrors src/lib/api.ts so telemetry POST hits the
+// same origin as the rest of the API.
+declare global {
+  interface Window {
+    __CS2_CONFIG__?: { workerUrl?: string }
+  }
+}
+const TELEMETRY_WORKER_URL =
+  (typeof window !== 'undefined' && window.__CS2_CONFIG__?.workerUrl) ||
+  import.meta.env.VITE_WORKER_URL ||
+  'http://localhost:8787'
 
 function sortValue(item: ItemFull, key: SortState['key']): number | string | undefined {
   switch (key) {
@@ -179,6 +194,9 @@ function AppDashboard({ onLogout }: DashboardProps) {
   const [scanError, setScanError] = useState<string | null>(null)
   const [filter, setFilter] = useState<FilterState>('all')
   const [sort, setSort] = useState<SortState>({ key: 'price', dir: 'desc' })
+  // Per-case item-median cache. Populated lazily when a case is selected so
+  // we don't fan out 41× /api/items/medians calls on dashboard load.
+  const [itemMedians, setItemMedians] = useState<Record<string, ItemMediansResponse>>({})
 
   const selected = items.find(i => i.id === selectedId)
 
@@ -193,6 +211,94 @@ function AppDashboard({ onLogout }: DashboardProps) {
     setAnalysis(null)
     setAnalysisError(null)
   }, [selectedId])
+
+  // Lazy fetch item medians on case selection. Cached per-id so re-selecting a
+  // case is free. Failure is swallowed — FIT will compute with empty items[]
+  // and unbox_ev_ratio falls back to a neutral score.
+  useEffect(() => {
+    if (!selectedId || itemMedians[selectedId]) return
+    let cancelled = false
+    fetchItemMedians(selectedId).then((res) => {
+      if (cancelled) return
+      setItemMedians(prev => (prev[selectedId] ? prev : { ...prev, [selectedId]: res }))
+    }).catch(() => { /* graceful — see comment above */ })
+    return () => { cancelled = true }
+  }, [selectedId, itemMedians])
+
+  // FIT for every priced case. Single useMemo across all 41 cases is fine at
+  // this N (~1ms total per Plan 2 vercel-react-best-practices audit). Drives
+  // both the selected case's FIT block and the peers component-distance calc.
+  const fitResults = useMemo(() => {
+    const now = Math.floor(Date.now() / 1000)
+    const out: Record<string, FitResult> = {}
+    for (const item of items) {
+      if (!item.price || !item.metrics) continue
+      const items_for_case = itemMedians[item.id]?.items ?? []
+      out[item.id] = computeFit({
+        case_: { id: item.id, pool: item.pool, notable: item.notable },
+        current: {
+          fetched_at: stats?.last_snapshot_at ?? now,
+          lowest: item.price.lowest,
+          median: item.price.median,
+          volume: item.price.volume,
+        },
+        history: item.history.filter(h => h.source === 'real').map(h => ({
+          fetched_at: Math.floor(new Date(h.date).getTime() / 1000),
+          lowest: h.price,
+          median: null,
+          // history endpoint doesn't expose volume in the current shape; v2
+          // enriches. Zero is correct-ish for crowding_risk's volZ which uses
+          // 30d mean+std anyway.
+          volume: 0,
+        })),
+        items: items_for_case,
+        asOf: now,
+        poolSize: items.length,
+      })
+    }
+    return out
+  }, [items, itemMedians, stats?.last_snapshot_at])
+
+  const fit = selectedId ? fitResults[selectedId] : undefined
+
+  // Peer candidates — every priced case with a FitResult. PeersList itself
+  // filters out the target and non-ok statuses, then sorts by Euclidean
+  // distance across the six component scores.
+  const peerCandidates = useMemo(() => {
+    return items.flatMap(it => {
+      const r = fitResults[it.id]
+      return r ? [{ id: it.id, name: it.name, result: r }] : []
+    })
+  }, [items, fitResults])
+
+  // Telemetry — fire-and-forget POST to /api/telemetry/fit on every fresh
+  // FIT computation for the selected case. Keyed on inputs_hash so we don't
+  // re-send when the user re-selects the same case with the same snapshot.
+  useEffect(() => {
+    if (!fit || fit.status !== 'ok') return
+    const token = getStoredToken()
+    fetch(`${TELEMETRY_WORKER_URL}/api/telemetry/fit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        case_id: fit.case_id,
+        weights_version: fit.weights_version,
+        algo_version: fit.algo_version,
+        status: fit.status,
+        confidence: fit.confidence,
+        fit: fit.fit,
+        liquidity: fit.components.liquidity.score,
+        momentum: fit.components.momentum.score,
+        supply: fit.components.supply_tightness.score,
+        content: fit.components.content_quality.score,
+        unbox_ev: fit.components.unbox_ev_ratio.score,
+        crowding: fit.components.crowding_risk.score,
+      }),
+    }).catch(() => { /* fire-and-forget */ })
+  }, [fit?.inputs_hash])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hydrate the scan panel from localStorage on mount so refreshes don't wipe
   // the last market scan a user generated. Errors are swallowed inside persist.
@@ -451,10 +557,9 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
                 analysis={analysis}
                 analyzing={analyzing}
                 error={analysisError}
-                // FIT data wired in T28
-                fit={undefined}
-                peers={undefined}
-                onSelectPeer={undefined}
+                fit={fit}
+                peers={peerCandidates}
+                onSelectPeer={(peerId) => setSelectedId(peerId)}
               />
             </div>
           </div>
