@@ -1,28 +1,17 @@
-import { C } from '../lib/theme'
 import { PoolBadge } from './Atoms'
 import { PriceChart } from './Charts'
 import { AnalysisOutput } from './AnalysisOutput'
 import { Banner } from './primitives/Banner'
+import { FitBlock } from './FitBlock'
+import { PeersList } from './PeersList'
+import { RoiCalculator } from './RoiCalculator'
 import type { ItemFull } from './CaseTable'
+import type { FitResult } from '../lib/fitScore'
 
-function MetricBar({
-  label, value, max = 100, color = C.cyan, tooltip,
-}: { label: string; value: number; max?: number; color?: string; tooltip?: string }) {
-  const pct = Math.max(0, Math.min(100, (value / max) * 100))
-  return (
-    <div className="mb-2.5">
-      <div className="flex justify-between text-[10px] mb-1">
-        <span className="text-ink-2 tracking-[0.1em]" title={tooltip}>{label}</span>
-        <span className="text-ink-0 font-semibold">{value.toFixed(0)}</span>
-      </div>
-      <div className="h-1 bg-bg-3 relative" aria-hidden="true">
-        <div
-          className="absolute inset-y-0 left-0"
-          style={{ width: `${pct}%`, background: color, boxShadow: `0 0 6px ${color}` }}
-        />
-      </div>
-    </div>
-  )
+interface PeerCandidate {
+  id: string
+  name: string
+  result: FitResult
 }
 
 interface Props {
@@ -31,9 +20,15 @@ interface Props {
   analysis: string | null
   analyzing: boolean
   error: string | null
+  fit?: FitResult
+  peers?: PeerCandidate[]
+  onSelectPeer?: (caseId: string) => void
 }
 
-export function DetailPanel({ item, onAnalyze, analysis, analyzing, error }: Props) {
+export function DetailPanel({
+  item, onAnalyze, analysis, analyzing, error,
+  fit, peers, onSelectPeer,
+}: Props) {
   if (!item) {
     return (
       <div className="p-10 text-center text-ink-3 text-[12px] tracking-[0.1em]">
@@ -45,6 +40,7 @@ export function DetailPanel({ item, onAnalyze, analysis, analyzing, error }: Pro
 
   return (
     <div className="animate-fade-up">
+      {/* Header */}
       <div
         className="px-5 py-4 border-b border-line"
         style={{ background: 'linear-gradient(180deg, rgba(255,116,33,0.04), transparent)' }}
@@ -64,6 +60,7 @@ export function DetailPanel({ item, onAnalyze, analysis, analyzing, error }: Pro
         </div>
       </div>
 
+      {/* Price summary (kept — terminal-essential) */}
       {p && (
         <div className="grid grid-cols-3 border-b border-line">
           <div className="px-5 py-3.5 border-r border-line">
@@ -86,31 +83,35 @@ export function DetailPanel({ item, onAnalyze, analysis, analyzing, error }: Pro
         </div>
       )}
 
+      {/* FIT block (T22) */}
+      {fit ? (
+        <FitBlock result={fit} />
+      ) : (
+        <div className="px-5 py-4 border-b border-line text-[11px] text-ink-3 tracking-[0.1em]">
+          // FIT computing…
+        </div>
+      )}
+
+      {/* PEERS (T23) */}
+      {fit && peers && onSelectPeer && (
+        <PeersList target={fit} candidates={peers} onSelect={onSelectPeer} />
+      )}
+
+      {/* Price chart with history zoom (T25) */}
       <div className="px-5 py-4 border-b border-line">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold m-0">// PRICE TRAJECTORY</h3>
           <span className="text-[9px] text-ink-3">
-            {item.history.some(h => h.source === 'real') ? 'real history from worker' : 'modeled from current px'}
+            {item.history.some((h) => h.source === 'real') ? 'real history from worker' : 'modeled from current px'}
           </span>
         </div>
         <PriceChart item={item} />
       </div>
 
-      {m && (
-        <div className="px-5 py-4 border-b border-line">
-          <h3 className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold mb-3 m-0">// SIGNALS</h3>
-          <MetricBar label="LIQUIDITY" value={m.liquidity} color={C.cyan} />
-          <MetricBar label="SCARCITY (POOL × AGE)" value={m.scarcity} color={C.orange} />
-          <MetricBar label="POOL APPRECIATION BIAS" value={m.poolMul * 100} color={C.purple} />
-          <MetricBar
-            label="SPREAD FRICTION"
-            value={Math.max(0, Math.min(m.spreadPct * 5, 100))}
-            color={C.yellow}
-            tooltip={m.spreadPct < 0 ? 'median < lowest — likely illiquid or stale median' : undefined}
-          />
-        </div>
-      )}
+      {/* ROI calc (T24) */}
+      {p && <RoiCalculator buyPrice={p.lowest} />}
 
+      {/* LLM-native thesis (preserved from Phase 1) */}
       <div className="px-5 py-4">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold m-0">// LLM-NATIVE THESIS</h3>
@@ -134,6 +135,8 @@ export function DetailPanel({ item, onAnalyze, analysis, analyzing, error }: Pro
           </div>
         )}
       </div>
+
+      {/* Decision Log placeholder — wired in T30 */}
     </div>
   )
 }

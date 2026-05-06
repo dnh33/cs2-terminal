@@ -1,0 +1,88 @@
+import { describe, it, expect } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { DetailPanel } from '../DetailPanel'
+import type { ItemFull } from '../CaseTable'
+import type { FitResult } from '../../lib/fitScore'
+
+const item: ItemFull = {
+  id: 'glove-case', name: 'Glove Case', released: '2016-11-28', pool: 'rare',
+  rare: 'Gloves', hasGloves: true, notable: 'gloves',
+  price: { lowest: 247.50, median: 250, volume: 12 },
+  metrics: { ageDays: 3287, ageYears: 9, spread: 2.5, spreadPct: 1, breakeven: 290, liquidity: 60, scarcity: 80, poolMul: 1.2 },
+  history: [],
+}
+
+const fitOk: FitResult = {
+  case_id: 'glove-case', fit: 73, status: 'ok', confidence: 'high',
+  components: {
+    liquidity: { raw: 0, score: 62 },
+    momentum: { raw: 0, score: 78 },
+    supply_tightness: { raw: 0, score: 91 },
+    content_quality: { raw: 0, score: 75 },
+    unbox_ev_ratio: { raw: 0, score: 52 },
+    crowding_risk: { raw: 0, score: 68 },
+    catalyst: null,
+  },
+  weights: {}, weights_version: 'v1', algo_version: 'fit-1.0.0',
+  inputs_hash: 'abc', as_of: 0, snapshot_at: 0, pool_size: 41,
+}
+
+describe('DetailPanel reshape', () => {
+  it('renders FIT block when fit prop is provided', () => {
+    render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+      />,
+    )
+    expect(screen.getByText('// FIT')).toBeInTheDocument()
+  })
+
+  it('renders PEERS section', () => {
+    render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+      />,
+    )
+    expect(screen.getByText('// PEERS')).toBeInTheDocument()
+  })
+
+  it('renders ROI calc', () => {
+    render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+      />,
+    )
+    expect(screen.getByText('// ROI CALC')).toBeInTheDocument()
+  })
+
+  it('does NOT render legacy SIGNALS metric bars', () => {
+    render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+      />,
+    )
+    expect(screen.queryByText('// SIGNALS')).not.toBeInTheDocument()
+    expect(screen.queryByText(/POOL APPRECIATION BIAS/)).not.toBeInTheDocument()
+  })
+
+  it('vertical order: FIT before chart before PEERS — wait, FIT before PEERS before chart', () => {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+      />,
+    )
+    const text = container.textContent ?? ''
+    const fitIdx = text.indexOf('// FIT')
+    const peersIdx = text.indexOf('// PEERS')
+    const chartIdx = text.indexOf('// PRICE TRAJECTORY')
+    const roiIdx = text.indexOf('// ROI CALC')
+    expect(fitIdx).toBeLessThan(peersIdx)
+    expect(peersIdx).toBeLessThan(chartIdx)
+    expect(chartIdx).toBeLessThan(roiIdx)
+  })
+})

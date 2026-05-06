@@ -451,6 +451,10 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
                 analysis={analysis}
                 analyzing={analyzing}
                 error={analysisError}
+                // FIT data wired in T28
+                fit={undefined}
+                peers={undefined}
+                onSelectPeer={undefined}
               />
             </div>
           </div>
