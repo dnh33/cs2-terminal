@@ -1134,6 +1134,44 @@ export default {
         return jsonResponse({ days, movers: rows }, env)
       }
 
+      // /api/items/medians?caseId=glove-case
+      // Returns latest item-level snapshot (lowest+median+volume) for every
+      // item belonging to the requested case, separated by tier. Powers the
+      // frontend FIT framework's unbox_ev_ratio computation.
+      if (url.pathname === '/api/items/medians' && request.method === 'GET') {
+        const caseId = url.searchParams.get('caseId')
+        if (!caseId) return jsonResponse({ error: 'caseId required' }, env, 400)
+
+        // Latest row per item_name for this case, partitioned by kind.
+        const rows = await env.DB.prepare(
+          `SELECT ip.case_id, ip.item_name, ip.kind, ip.fetched_at, ip.lowest, ip.median, ip.volume
+           FROM item_prices ip
+           INNER JOIN (
+             SELECT case_id, item_name, MAX(fetched_at) AS max_fetched
+             FROM item_prices
+             WHERE case_id = ?
+             GROUP BY case_id, item_name
+           ) latest
+             ON ip.case_id = latest.case_id
+             AND ip.item_name = latest.item_name
+             AND ip.fetched_at = latest.max_fetched
+           ORDER BY ip.kind, ip.item_name`
+        ).bind(caseId).all<{
+          case_id: string
+          item_name: string
+          kind: 'item_high' | 'item_low'
+          fetched_at: number
+          lowest: number | null
+          median: number | null
+          volume: number | null
+        }>()
+
+        return jsonResponse(
+          { case_id: caseId, items: rows.results ?? [] },
+          env,
+        )
+      }
+
       // Stats
       if (url.pathname === '/stats' && request.method === 'GET') {
         const stats = await getStats(env)
