@@ -270,14 +270,33 @@ export async function callClaude(req: ChatRequest): Promise<string> {
  * Streaming chat completion. Calls onChunk for each delta, returns the final
  * concatenated text. The signal lets the caller cancel mid-stream.
  *
- * Response is OpenAI-format SSE with one JSON object per chunk:
+ * Response is OpenAI-format SSE. Default-event records carry one JSON chunk:
  *   data: {"choices":[{"delta":{"content":"..."}}]}
  *   data: [DONE]
+ *
+ * The Worker may also emit named events (Plan-2 structured contract) at the
+ * end of a structured stream, e.g.:
+ *   event: validated
+ *   data: {"verdict":"LONG","confidence":0.7,...}
+ *
+ *   event: invalid
+ *   data: {"reason":"sentinel_missing"}
+ *
+ * Parsing follows the WHATWG SSE dispatch model: an `event:` line sets the
+ * pending event name; a blank line dispatches the buffered record (default
+ * name is "message"); the event name resets to default after dispatch.
+ *
+ * Default-event records are passed to onChunk as before (callers that don't
+ * need named events leave `onEvent` unset and behave unchanged). Named
+ * events are surfaced through the optional `onEvent(name, parsedData)`
+ * callback — they're parsed as JSON; non-JSON named-event payloads are
+ * delivered as a `{ raw: string }` shape so the caller can decide.
  */
 export async function callClaudeStream(
   req: ChatRequest,
   onChunk: (delta: string) => void,
   signal?: AbortSignal,
+  onEvent?: (name: string, data: unknown) => void,
 ): Promise<string> {
   const res = await fetch(`${WORKER_URL}/chat`, {
     method: 'POST',
@@ -299,24 +318,34 @@ export async function callClaudeStream(
   const decoder = new TextDecoder()
   let buffer = ''
   let full = ''
+  let sawDone = false
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
+  // SSE record state (per WHATWG SSE spec): event name persists across
+  // multiple lines until the dispatch boundary (blank line).
+  let currentEventName = 'message'
+  let dataBuffer = ''
+  let hasData = false
 
-    // SSE format: events separated by blank line. Each event is `data: <json>`.
-    const lines = buffer.split('\n')
-    buffer = lines.pop() || ''  // keep the last partial line in the buffer
+  // Dispatch the currently buffered record. Mirrors the spec's
+  // "dispatch the event" step: data is the joined buffer (newline-separated
+  // for multi-line `data:` fields), event name defaults to "message".
+  const dispatch = () => {
+    if (!hasData) {
+      // blank line with no data → still resets the event name per spec.
+      currentEventName = 'message'
+      return
+    }
+    const payload = dataBuffer
+    const name = currentEventName
+    // Reset for next record BEFORE invoking callbacks so re-entrancy is safe.
+    dataBuffer = ''
+    hasData = false
+    currentEventName = 'message'
 
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (!trimmed.startsWith('data:')) continue
-      const payload = trimmed.slice(5).trim()
-      if (payload === '[DONE]') return full
+    if (name === 'message') {
+      if (payload === '[DONE]') { sawDone = true; return }
       try {
         const chunk = JSON.parse(payload)
-        // Mid-stream error
         if (chunk.error) {
           throw new Error(chunk.error.message || 'stream error')
         }
@@ -326,12 +355,73 @@ export async function callClaudeStream(
           onChunk(delta)
         }
       } catch (e) {
-        // ignore non-JSON keepalive comments (": OPENROUTER PROCESSING")
-        if (payload.startsWith(':')) continue
+        // OpenRouter sends ": OPENROUTER PROCESSING" keepalives as comments;
+        // those are stripped at the line-parser level and never reach here.
+        // Anything else that fails to parse is a real error.
         throw e
+      }
+    } else {
+      // Named event — surface to caller. Try JSON first (worker contract);
+      // fall back to raw string for forward-compat.
+      if (!onEvent) return
+      try {
+        onEvent(name, JSON.parse(payload))
+      } catch {
+        onEvent(name, { raw: payload })
       }
     }
   }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+
+    // SSE line splitting: per spec, lines end with \n, \r, or \r\n. Worker
+    // emits \n only, so split on \n is correct. Keep the last partial line
+    // in `buffer` for the next chunk.
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+
+    for (const rawLine of lines) {
+      // Strip trailing \r (in case of \r\n line endings).
+      const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine
+      if (line === '') {
+        // dispatch boundary
+        dispatch()
+        if (sawDone) return full
+        continue
+      }
+      // Comment line (per spec: starts with ':') — ignore.
+      if (line.startsWith(':')) continue
+
+      // Field parsing: "field" or "field: value" or "field:value".
+      const colonIdx = line.indexOf(':')
+      let field: string
+      let valueRaw: string
+      if (colonIdx === -1) {
+        field = line
+        valueRaw = ''
+      } else {
+        field = line.slice(0, colonIdx)
+        valueRaw = line.slice(colonIdx + 1)
+      }
+      // Per spec: if value starts with a single space, drop it.
+      const value = valueRaw.startsWith(' ') ? valueRaw.slice(1) : valueRaw
+
+      if (field === 'event') {
+        currentEventName = value
+      } else if (field === 'data') {
+        // Per spec: multiple data: lines join with \n.
+        dataBuffer = hasData ? `${dataBuffer}\n${value}` : value
+        hasData = true
+      }
+      // other fields (id, retry) are ignored — worker doesn't emit them.
+    }
+  }
+  // Stream ended without an explicit blank-line dispatch for the trailing
+  // record. Flush whatever's pending.
+  if (hasData) dispatch()
   return full
 }
 

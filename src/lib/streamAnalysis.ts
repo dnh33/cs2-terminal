@@ -112,6 +112,16 @@ export async function streamAnalysis(opts: StreamAnalysisOptions): Promise<Strea
   let tailBuffer = ''
   let proseAccum = ''
 
+  // Authoritative path: the Worker emits a terminal `event: validated` /
+  // `event: invalid` SSE record after parsing the sentinel server-side.
+  // We latch the first such event and prefer it over the client-side
+  // sentinel reparse (defense-in-depth: still Zod-validate on receipt).
+  // If neither event arrives (legacy worker / non-structured), we fall
+  // back to parseStreamWithSentinel on the accumulated prose+tail.
+  let workerVerdict: AnalysisVerdict | null = null
+  let workerError: ParseError | null = null
+  let workerEventSeen = false
+
   await callClaudeStream(
     {
       messages: [{ role: 'user', content: prompt }],
@@ -147,7 +157,45 @@ export async function streamAnalysis(opts: StreamAnalysisOptions): Promise<Strea
       inTail = true
     },
     signal,
+    (name, data) => {
+      // First worker event wins; subsequent ones are ignored.
+      if (workerEventSeen) return
+      if (name === 'validated') {
+        const result = ANALYSIS_SCHEMA.safeParse(data)
+        if (result.success) {
+          workerVerdict = result.data
+          workerEventSeen = true
+        } else {
+          // Worker said "validated" but the payload doesn't match our schema.
+          // Treat as schema_invalid; fall through to whatever the sentinel
+          // reparse decides only if no other signal arrives.
+          workerError = 'schema_invalid'
+          workerEventSeen = true
+        }
+      } else if (name === 'invalid') {
+        // Worker reported a structural failure. Map its `reason` field to
+        // our ParseError taxonomy where possible; default to malformed_json.
+        const reason = (data as { reason?: string } | null)?.reason
+        workerError =
+          reason === 'sentinel_missing' ? 'no_sentinel'
+          : reason === 'json_parse_error' ? 'malformed_json'
+          : 'malformed_json'
+        workerEventSeen = true
+      }
+    },
   )
 
+  // Authoritative: worker-event-driven verdict.
+  if (workerEventSeen) {
+    // Slice prose out of the accumulated stream the same way the sentinel
+    // parser would, so the UI's prose snapshot stays consistent regardless
+    // of which path produced the verdict.
+    const sentinelIdx = fullStream.indexOf(SENTINEL)
+    const prose = sentinelIdx === -1 ? fullStream : fullStream.slice(0, sentinelIdx)
+    return { prose, verdict: workerVerdict, error: workerVerdict ? null : workerError }
+  }
+
+  // Legacy fallback: no worker event arrived (older worker, or transport
+  // dropped the trailing record). Reparse the sentinel from prose.
   return parseStreamWithSentinel(fullStream)
 }
