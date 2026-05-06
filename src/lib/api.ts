@@ -214,6 +214,23 @@ export async function fetchStats(): Promise<MarketStats> {
   return jsonGet<MarketStats>('/stats')
 }
 
+export interface CronRecentRun {
+  started_at: number
+  finished_at: number | null
+  succeeded: number
+  failed: number
+  error: string | null
+  duration_s: number | null
+}
+
+export interface CronRecentResponse {
+  runs: CronRecentRun[]
+}
+
+export async function fetchCronRecent(n = 24): Promise<CronRecentResponse> {
+  return jsonGet<CronRecentResponse>(`/cron/recent?n=${n}`)
+}
+
 /** Trigger an on-demand refresh of any stale cases. */
 export async function refreshStale(): Promise<{ refreshed: number; failed?: number; attempted?: number; remaining?: number; message?: string; freshDeploy?: boolean }> {
   const res = await fetch(`${WORKER_URL}/refresh`, {
