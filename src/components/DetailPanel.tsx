@@ -30,6 +30,13 @@ interface Props {
   verdict?: Verdict
   confidence?: number
   /**
+   * P3-T36: when true, the selected case was opened by clicking a CaseChip in
+   * the most recent Market Scan output (vs direct table click). Renders a
+   * compact "↳ FROM THIS SCAN" pill near the header so the user has a
+   * breadcrumb back to the scan that originated the inspection.
+   */
+  fromScan?: boolean
+  /**
    * Optional close handler used by the mobile Drawer wrapper (Esc / backdrop).
    * Desktop ignores it. Defaults to a noop so existing call-sites that don't
    * pass it remain valid (DetailPanel API stays the same per Plan 2 T27).
@@ -39,7 +46,7 @@ interface Props {
 
 export function DetailPanel({
   item, onAnalyze, analysis, analyzing, error,
-  fit, peers, onSelectPeer, verdict, confidence, onClose,
+  fit, peers, onSelectPeer, verdict, confidence, fromScan, onClose,
 }: Props) {
   if (!item) {
     return (
@@ -71,6 +78,13 @@ export function DetailPanel({
           </div>
         </div>
       </div>
+
+      {/* From-scan pill (T36) — breadcrumb back to the originating scan */}
+      {fromScan && (
+        <div className="px-5 py-2 border-b border-line bg-accent-data/[0.04] text-[11px] text-accent-data flex items-center gap-2">
+          <span className="font-bold tracking-[0.15em] text-[9px] shrink-0">↳ FROM THIS SCAN</span>
+        </div>
+      )}
 
       {/* Price summary (kept — terminal-essential) */}
       {p && (

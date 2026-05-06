@@ -103,3 +103,28 @@ describe('DetailPanel — Decision Log', () => {
     expect(within(desktop).getByRole('button', { name: /commit/i })).toBeEnabled()
   })
 })
+
+describe('DetailPanel — from-scan pill (T36)', () => {
+  it('renders "From this scan" pill when fromScan is true', () => {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+        fromScan
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    expect(within(desktop).getByText(/from this scan/i)).toBeInTheDocument()
+  })
+
+  it('does not render pill when fromScan is false/undefined', () => {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    expect(within(desktop).queryByText(/from this scan/i)).not.toBeInTheDocument()
+  })
+})

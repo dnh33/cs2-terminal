@@ -182,7 +182,16 @@ function formatDeltaTable(m7: MoverLite[], m30: MoverLite[], m90: MoverLite[]): 
 function AppDashboard({ onLogout }: DashboardProps) {
   const { items, fetching, lastUpdated, fetchError, stats, fetchAll, loadDemo, loadRealHistory } = useMarketData()
 
-  const [urlSelectedId, setSelectedId] = useSelectedCase()
+  const [urlSelectedId, setSelectedIdRaw] = useSelectedCase()
+  // P3-T36: track whether the most recent selection came from a CaseChip in
+  // the scan output ('scan') vs a direct table/chart/cmdK click ('user'). The
+  // DetailPanel renders a "FROM THIS SCAN" pill when source==='scan' so the
+  // user has a breadcrumb back to the originating market scan.
+  const [lastSelectionSource, setLastSelectionSource] = useState<'user' | 'scan' | null>(null)
+  function setSelectedId(id: string | null, source: 'user' | 'scan' = 'user') {
+    setLastSelectionSource(id ? source : null)
+    setSelectedIdRaw(id)
+  }
   // Validate the URL value against the loaded items list. A garbage ?case=
   // value (typo, deleted case, attacker probe) would otherwise trigger
   // fetchHistory + analyzeCase + computeFit on a non-existent ID and
@@ -611,7 +620,14 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
       {hasPrice && (
         <div className="px-6 py-5">
           <div data-test="market-scan-panel">
-            <MarketScanPanel items={items} onScan={runScan} scan={scan} scanning={scanning} error={scanError} />
+            <MarketScanPanel
+              items={items}
+              onScan={runScan}
+              scan={scan}
+              scanning={scanning}
+              error={scanError}
+              onSelectCase={(id) => setSelectedId(id, 'scan')}
+            />
           </div>
 
           <div className="mb-4" data-test="movers-panel">
@@ -647,6 +663,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
                 fit={fit}
                 peers={peerCandidates}
                 onSelectPeer={(peerId) => setSelectedId(peerId)}
+                fromScan={lastSelectionSource === 'scan'}
               />
             </div>
           </div>
