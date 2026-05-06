@@ -6,8 +6,10 @@ import { Drawer } from './primitives/Drawer'
 import { FitBlock } from './FitBlock'
 import { PeersList } from './PeersList'
 import { RoiCalculator } from './RoiCalculator'
+import { DecisionLog } from './DecisionLog'
 import type { ItemFull } from './CaseTable'
 import type { FitResult } from '../lib/fitScore'
+import type { Verdict } from '../lib/useDecisionLog'
 
 interface PeerCandidate {
   id: string
@@ -24,6 +26,9 @@ interface Props {
   fit?: FitResult
   peers?: PeerCandidate[]
   onSelectPeer?: (caseId: string) => void
+  /** From Plan 3 structured analysis — Plan 2 ships the slot, Plan 3 wires the value */
+  verdict?: Verdict
+  confidence?: number
   /**
    * Optional close handler used by the mobile Drawer wrapper (Esc / backdrop).
    * Desktop ignores it. Defaults to a noop so existing call-sites that don't
@@ -34,7 +39,7 @@ interface Props {
 
 export function DetailPanel({
   item, onAnalyze, analysis, analyzing, error,
-  fit, peers, onSelectPeer, onClose,
+  fit, peers, onSelectPeer, verdict, confidence, onClose,
 }: Props) {
   if (!item) {
     return (
@@ -143,7 +148,16 @@ export function DetailPanel({
         )}
       </div>
 
-      {/* Decision Log placeholder — wired in T30 */}
+      {item && fit && (
+        <DecisionLog
+          caseId={item.id}
+          caseName={item.name}
+          snapshotAt={fit.snapshot_at * 1000}
+          priceAtCommit={item.price?.lowest ?? 0}
+          verdict={verdict}
+          confidence={confidence}
+        />
+      )}
     </div>
   )
 

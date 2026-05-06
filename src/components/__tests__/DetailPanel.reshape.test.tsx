@@ -75,3 +75,31 @@ describe('DetailPanel reshape', () => {
     expect(chartIdx).toBeLessThan(roiIdx)
   })
 })
+
+describe('DetailPanel — Decision Log', () => {
+  // Per P2-T27, DetailPanel renders both desktop + mobile (Drawer) wrappers in jsdom,
+  // so unscoped queries find duplicates. Scope to the desktop subtree, mirroring
+  // the renderDesktop() pattern above. (Deviation from plan T30 step 1's literal
+  // test code, which assumed single-render — incompatible with T27.)
+  function renderWithVerdict() {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+        verdict="LONG" confidence={0.78}
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    return { desktop }
+  }
+
+  it('renders DECISION LOG section', () => {
+    const { desktop } = renderWithVerdict()
+    expect(within(desktop).getByText('// DECISION LOG')).toBeInTheDocument()
+  })
+
+  it('Decision Log COMMIT button is enabled when verdict is provided', () => {
+    const { desktop } = renderWithVerdict()
+    expect(within(desktop).getByRole('button', { name: /commit/i })).toBeEnabled()
+  })
+})
