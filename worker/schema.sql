@@ -41,3 +41,19 @@ CREATE TABLE IF NOT EXISTS cron_runs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_cron_runs_kind_time ON cron_runs(kind, started_at DESC);
+
+-- Per-item snapshots (knife/glove/covert/classified at item_high cadence,
+-- restricted/mil-spec at item_low cadence). One row per (case_id, item_name, fetched_at).
+CREATE TABLE IF NOT EXISTS item_prices (
+  case_id     TEXT NOT NULL,
+  item_name   TEXT NOT NULL,
+  kind        TEXT NOT NULL CHECK(kind IN ('item_high','item_low')),
+  fetched_at  INTEGER NOT NULL,
+  lowest      REAL,
+  median      REAL,
+  volume      INTEGER,
+  PRIMARY KEY (case_id, item_name, fetched_at),
+  FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_item_case_kind_time ON item_prices(case_id, kind, fetched_at DESC);
+CREATE INDEX IF NOT EXISTS idx_item_name_time      ON item_prices(item_name, fetched_at DESC);

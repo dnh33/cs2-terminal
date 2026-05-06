@@ -29,6 +29,7 @@
  */
 
 import { OpenRouter } from '@openrouter/sdk'
+import { uniqueHighTierItems, uniqueLowTierItems, itemToCases } from './data/dropTable'
 
 export interface Env {
   DB: D1Database
@@ -266,6 +267,87 @@ function insertSnapshot(env: Env, caseId: string, fetchedAt: number, r: FetchRes
     )
     .bind(caseId, fetchedAt, r.lowest ?? null, r.median ?? null, r.volume ?? 0)
     .run()
+}
+
+// ─── tiered item sweeps ─────────────────────────────────────────────────────
+
+interface ItemSweepOptions {
+  kind: 'item_high' | 'item_low'
+  itemNames: string[]
+  spacingMs: number
+}
+
+async function sweepItems(env: Env, opts: ItemSweepOptions): Promise<SweepResult> {
+  const { kind, itemNames, spacingMs } = opts
+  const itemCaseMap = itemToCases()
+  const now = Math.floor(Date.now() / 1000)
+  let succeeded = 0
+  let failed = 0
+  let rateLimited = false
+
+  const inserts: Promise<unknown>[] = []
+
+  for (let i = 0; i < itemNames.length; i++) {
+    const itemName = itemNames[i]
+    const result = await fetchSteamPrice(itemName)
+
+    if (result.status === 'rate_limited') {
+      rateLimited = true
+      console.warn(`[${kind}] 429 on ${itemName}, backing off ${STEAM_RATE_LIMIT_BACKOFF_MS}ms`)
+      await sleep(STEAM_RATE_LIMIT_BACKOFF_MS)
+      const retry = await fetchSteamPrice(itemName)
+      if (retry.ok) {
+        // Write one snapshot row PER parent case this item belongs to.
+        const parentCases = itemCaseMap.get(itemName) ?? []
+        for (const caseId of parentCases) {
+          inserts.push(insertItemSnapshot(env, caseId, itemName, now, retry, kind))
+        }
+        succeeded++
+      } else {
+        failed++
+      }
+    } else if (result.ok) {
+      const parentCases = itemCaseMap.get(itemName) ?? []
+      for (const caseId of parentCases) {
+        inserts.push(insertItemSnapshot(env, caseId, itemName, now, result, kind))
+      }
+      succeeded++
+    } else {
+      failed++
+    }
+
+    // Steam rate-limit spacing between requests
+    if (i < itemNames.length - 1) await sleep(spacingMs)
+  }
+
+  await Promise.allSettled(inserts)
+  return { succeeded, failed, rateLimited }
+}
+
+async function insertItemSnapshot(
+  env: Env,
+  caseId: string,
+  itemName: string,
+  fetchedAt: number,
+  result: FetchResult,
+  kind: 'item_high' | 'item_low',
+): Promise<void> {
+  await env.DB.prepare(
+    `INSERT OR REPLACE INTO item_prices (case_id, item_name, kind, fetched_at, lowest, median, volume)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(caseId, itemName, kind, fetchedAt, result.lowest ?? null, result.median ?? null, result.volume ?? 0)
+    .run()
+}
+
+async function sweepItemsHigh(env: Env): Promise<SweepResult> {
+  const spacing = parseInt(env.STEAM_REQUEST_SPACING_MS, 10) || 4000
+  return sweepItems(env, { kind: 'item_high', itemNames: uniqueHighTierItems(), spacingMs: spacing })
+}
+
+async function sweepItemsLow(env: Env): Promise<SweepResult> {
+  const spacing = parseInt(env.STEAM_REQUEST_SPACING_MS, 10) || 4000
+  return sweepItems(env, { kind: 'item_low', itemNames: uniqueLowTierItems(), spacingMs: spacing })
 }
 
 // ─── historical backfill (Steam pricehistory endpoint, requires login cookie) ─
@@ -1196,10 +1278,68 @@ export default {
   /**
    * Cron trigger handler. Cloudflare invokes this on the schedule defined in
    * wrangler.toml [triggers] crons. We get a 15-minute execution budget.
+   *
+   * Dispatches by cron string. ctx.waitUntil keeps the worker alive
+   * until the sweep completes — without it Cloudflare terminates after
+   * scheduled() resolves, killing in-flight Steam fetches.
    */
-  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(runSweepWithLog(env, 'cron'))
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    const cron = event.cron
+    const startedAt = Math.floor(Date.now() / 1000)
+
+    if (cron === '5 * * * *') {
+      ctx.waitUntil(runCaseSweep(env, startedAt))
+      return
+    }
+    if (cron === '35 */3 * * *') {
+      ctx.waitUntil(runItemSweep(env, startedAt, 'item_high', sweepItemsHigh))
+      return
+    }
+    if (cron === '50 4,16 * * *') {
+      ctx.waitUntil(runItemSweep(env, startedAt, 'item_low', sweepItemsLow))
+      return
+    }
+    console.warn(`[scheduled] unknown cron: ${cron}`)
   },
+}
+
+async function runCaseSweep(env: Env, startedAt: number): Promise<void> {
+  try {
+    const result = await sweep(env)
+    const finishedAt = Math.floor(Date.now() / 1000)
+    await env.DB.prepare(
+      `INSERT INTO cron_runs (started_at, kind, finished_at, succeeded, failed, error) VALUES (?, 'case', ?, ?, ?, ?)`
+    ).bind(startedAt, finishedAt, result.succeeded, result.failed, result.rateLimited ? 'rate_limited' : null).run()
+  } catch (e: any) {
+    console.error('[case] sweep failed:', e)
+    try {
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO cron_runs (started_at, kind, finished_at, error) VALUES (?, 'case', ?, ?)`
+      ).bind(startedAt, Math.floor(Date.now() / 1000), e.message ?? 'unknown error').run()
+    } catch { /* swallow secondary errors */ }
+  }
+}
+
+async function runItemSweep(
+  env: Env,
+  startedAt: number,
+  kind: 'item_high' | 'item_low',
+  fn: (env: Env) => Promise<SweepResult>,
+): Promise<void> {
+  try {
+    const result = await fn(env)
+    const finishedAt = Math.floor(Date.now() / 1000)
+    await env.DB.prepare(
+      `INSERT INTO cron_runs (started_at, kind, finished_at, succeeded, failed, error) VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(startedAt, kind, finishedAt, result.succeeded, result.failed, result.rateLimited ? 'rate_limited' : null).run()
+  } catch (e: any) {
+    console.error(`[${kind}] sweep failed:`, e)
+    try {
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO cron_runs (started_at, kind, finished_at, error) VALUES (?, ?, ?, ?)`
+      ).bind(startedAt, kind, Math.floor(Date.now() / 1000), e.message ?? 'unknown error').run()
+    } catch { /* swallow */ }
+  }
 }
 
 async function runSweepWithLog(env: Env, source: 'cron' | 'admin'): Promise<void> {
