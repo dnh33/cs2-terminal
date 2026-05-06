@@ -30,7 +30,7 @@ export function MoversPanel({ onSelect, earliestSnapshotAge }: MoversPanelProps)
     setLoading(true)
     setError(null)
     fetchMovers(days)
-      .then(rows => { if (!cancel) setMovers(rows) })
+      .then(resp => { if (!cancel) setMovers(resp.movers) })
       .catch(e => { if (!cancel) setError(e.message) })
       .finally(() => { if (!cancel) setLoading(false) })
     return () => { cancel = true }

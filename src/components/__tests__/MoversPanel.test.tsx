@@ -8,7 +8,7 @@ vi.mock('../../lib/api', () => ({
 
 import { fetchMovers } from '../../lib/api'
 import { MoversPanel } from '../MoversPanel'
-import { PriceChart, PoolDistribution, VolumePriceScatter } from '../Charts'
+import { PriceChart, VolumePriceScatter } from '../Charts'
 import type { ItemFull } from '../CaseTable'
 
 const movers = [
@@ -18,7 +18,7 @@ const movers = [
 
 beforeEach(() => {
   ;(fetchMovers as any).mockReset()
-  ;(fetchMovers as any).mockResolvedValue(movers)
+  ;(fetchMovers as any).mockResolvedValue({ days: 7, movers })
 })
 
 describe('MoversPanel a11y + keyboard', () => {
@@ -87,13 +87,6 @@ describe('Charts a11y', () => {
     const img = container.querySelector('[role="img"]')
     expect(img).not.toBeNull()
     expect(img!.getAttribute('aria-label')).toMatch(/price/i)
-  })
-
-  it('PoolDistribution wraps in role=img with aria-label summary', () => {
-    const { container } = render(<PoolDistribution items={[item]} />)
-    const img = container.querySelector('[role="img"]')
-    expect(img).not.toBeNull()
-    expect(img!.getAttribute('aria-label')).toMatch(/pool/i)
   })
 
   it('VolumePriceScatter wraps in role=img and renders without ReferenceError', () => {

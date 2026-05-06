@@ -1,5 +1,6 @@
 import type { PriceData, PricePoint } from './metrics'
 import type { Pool } from './cases'
+import type { PoolIndexRawPoint } from './poolIndex'
 
 // Worker URL precedence:
 //   1. window.__CS2_CONFIG__.workerUrl  — runtime config from /config.js
@@ -193,10 +194,19 @@ export async function fetchHistory(name: string, days = 30): Promise<PricePoint[
     }))
 }
 
-/** Fetch top movers in a window. */
-export async function fetchMovers(days = 7): Promise<MoverRow[]> {
-  const data = await jsonGet<{ movers: MoverRow[] }>(`/movers?days=${days}`)
-  return data.movers
+export interface MoversResponse {
+  days: number
+  movers: MoverRow[]
+  pool_index?: {
+    DISCONTINUED: PoolIndexRawPoint[]
+    RARE: PoolIndexRawPoint[]
+    ACTIVE: PoolIndexRawPoint[]
+  }
+}
+
+/** Fetch top movers + pool-index series in a window. */
+export async function fetchMovers(days = 7): Promise<MoversResponse> {
+  return jsonGet<MoversResponse>(`/movers?days=${days}`)
 }
 
 /** Fetch aggregate market stats. */

@@ -7,7 +7,7 @@ import { CaseTable } from './components/CaseTable'
 import type { SortState, FilterState, ItemFull } from './components/CaseTable'
 import { DetailPanel } from './components/DetailPanel'
 import { MarketScanPanel, ChatPanel, type ChatPanelHandle } from './components/Panels'
-import { PoolDistribution, VolumePriceScatter } from './components/Charts'
+import { PoolIndexChart, VolumePriceScatter } from './components/Charts'
 import { MoversPanel } from './components/MoversPanel'
 import { LoginScreen } from './components/LoginScreen'
 import { SkipLink } from './components/primitives/SkipLink'
@@ -24,6 +24,7 @@ import {
   fetchMovers,
   getStoredToken,
 } from './lib/api'
+import type { MoversResponse } from './lib/api'
 import { streamAnalysis, type AnalysisVerdict } from './lib/streamAnalysis'
 import { computeDivergence } from './lib/divergence'
 import type { PricePoint } from './lib/metrics'
@@ -215,6 +216,19 @@ function AppDashboard({ onLogout }: DashboardProps) {
   // we don't fan out 41× /api/items/medians calls on dashboard load.
   const [itemMedians, setItemMedians] = useState<Record<string, ItemMediansResponse>>({})
   const [cmdkOpen, setCmdkOpen] = useState(false)
+  // T8: dedicated App-level state for the PoolIndexChart. We intentionally do
+  // NOT hoist MoversPanel's internal `days` state — keeping its fetch loop
+  // self-contained minimizes blast radius (its tests, polish tests, and
+  // window-pill behavior stay untouched). The chart uses its own 30D window.
+  const [moversResponse, setMoversResponse] = useState<MoversResponse | null>(null)
+  const moversDays = 30
+  useEffect(() => {
+    let cancel = false
+    fetchMovers(moversDays)
+      .then(resp => { if (!cancel) setMoversResponse(resp) })
+      .catch(() => { /* chart falls back to empty pool_index */ })
+    return () => { cancel = true }
+  }, [moversDays])
   // P1-#3 prep: track the snapshot timestamp captured at the most recent
   // successful market scan completion. DetailPanel uses this together with
   // the current `stats.last_snapshot_at` to gate the "from this scan" pill —
@@ -536,9 +550,9 @@ ${historyBlock}`
       // real time-series signal instead of just "current snapshot" cross-section.
       // Cases with <2 snapshots in a window simply won't appear, that's expected.
       const [m7, m30, m90] = await Promise.all([
-        fetchMovers(7).catch(() => []),
-        fetchMovers(30).catch(() => []),
-        fetchMovers(90).catch(() => []),
+        fetchMovers(7).then(r => r.movers).catch(() => []),
+        fetchMovers(30).then(r => r.movers).catch(() => []),
+        fetchMovers(90).then(r => r.movers).catch(() => []),
       ])
       const deltaContext = formatDeltaTable(m7, m30, m90)
       const enhancedContext = marketContext + '\n\n=== % CHANGE WINDOWS (real Δ from D1) ===\n' + deltaContext
@@ -772,7 +786,10 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
           </div>
 
           <div data-test="chart-row" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <PoolDistribution items={items} />
+            <PoolIndexChart
+              poolIndex={moversResponse?.pool_index ?? { DISCONTINUED: [], RARE: [], ACTIVE: [] }}
+              days={moversDays}
+            />
             <VolumePriceScatter items={items} onSelect={setSelectedId} selectedId={selectedId} />
           </div>
 
