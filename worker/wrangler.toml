@@ -54,7 +54,11 @@ database_id   = "REPLACE-WITH-YOUR-D1-DATABASE-ID"
 #   "5 */6 * * *"    every 6 hours
 #   "5 */12 * * *"   every 12 hours
 [triggers]
-crons = ["5 * * * *"]
+crons = [
+  "5 * * * *",          # Hourly case sweep at :05
+  "35 */3 * * *",       # High-tier item sweep every 3h at :35
+  "50 4,16 * * *",      # Low-tier item sweep twice daily at 04:50 and 16:50
+]
 
 # Secrets (set via `wrangler secret put <NAME>`):
 #   OPENROUTER_API_KEY   — required; get one at https://openrouter.ai/keys
