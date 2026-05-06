@@ -247,6 +247,13 @@ interface ChatRequest {
   cache_system_prompt?: boolean
   /** OpenRouter response cache TTL in seconds — cache HITS are free. */
   cache_response_ttl?: number
+  /**
+   * Tells the worker to inject the sentinel-instruction system prompt prefix
+   * so Claude appends a [[CASE_SNIPER_VERDICT]] tail with structured JSON.
+   * Plan 2 T28 reads this server-side; streamAnalysis (T20) wires it through
+   * for the analyze-case path. Other callers leave it false/unset.
+   */
+  structured?: boolean
 }
 
 /** Non-streaming chat completion. */

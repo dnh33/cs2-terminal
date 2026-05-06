@@ -7,6 +7,7 @@ import { FitBlock } from './FitBlock'
 import { PeersList } from './PeersList'
 import { RoiCalculator } from './RoiCalculator'
 import { DecisionLog } from './DecisionLog'
+import { VerdictBadge } from './VerdictBadge'
 import type { ItemFull } from './CaseTable'
 import type { FitResult } from '../lib/fitScore'
 import type { Verdict } from '../lib/useDecisionLog'
@@ -146,7 +147,10 @@ export function DetailPanel({
       {/* LLM-native thesis (preserved from Phase 1) */}
       <div className="px-5 py-4">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold m-0">// LLM-NATIVE THESIS</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold m-0">// LLM-NATIVE THESIS</h3>
+            <VerdictBadge loading={analyzing} verdict={verdict} confidence={confidence} />
+          </div>
           <div className="flex gap-2">
             <button
               onClick={onAnalyze}

@@ -171,3 +171,37 @@ describe('DetailPanel — Devil\'s Advocate', () => {
     expect(within(desktop).queryByRole('button', { name: /devil/i })).not.toBeInTheDocument()
   })
 })
+
+// P3-T40: VerdictBadge wired into DetailPanel near // LLM-NATIVE THESIS
+// header. With T27 dual-mount (desktop + mobile Drawer), unscoped queries
+// would hit duplicates — but `screen.getByText` would also fail on duplicates
+// here. The plan's literal test code uses screen.getByText which works
+// because the mobile Drawer is rendered via a portal-ish overlay that the
+// jsdom render still mounts inline; dedup via desktop scoping for safety.
+describe('DetailPanel — verdict badge wiring', () => {
+  it('renders VerdictBadge when verdict prop is set', () => {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis="x" analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+        verdict="LONG" confidence={0.78}
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    expect(within(desktop).getByText(/LONG/)).toBeInTheDocument()
+    expect(within(desktop).getByText(/78%/)).toBeInTheDocument()
+  })
+
+  it('VerdictBadge enables DecisionLog COMMIT button', () => {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis="x" analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+        verdict="LONG" confidence={0.78}
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    const commitBtn = within(desktop).getByRole('button', { name: /commit/i })
+    expect(commitBtn).toBeEnabled()
+  })
+})

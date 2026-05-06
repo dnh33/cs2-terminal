@@ -24,6 +24,7 @@ import {
   fetchMovers,
   getStoredToken,
 } from './lib/api'
+import { streamAnalysis, type AnalysisVerdict } from './lib/streamAnalysis'
 import type { PricePoint } from './lib/metrics'
 import { saveAnalysis, loadAnalysis, saveScan, loadLastScan } from './lib/persist'
 import { useSelectedCase } from './lib/useSelectedCase'
@@ -200,6 +201,10 @@ function AppDashboard({ onLogout }: DashboardProps) {
   const [analysis, setAnalysis] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
+  // P3-T40: structured-analysis verdict (LONG/FLAT/AVOID + confidence). Set
+  // by analyzeCase() once the streamed sentinel-tail parses successfully.
+  // Cached cache hits keep this null — Plan 4 may re-derive from prose.
+  const [verdict, setVerdict] = useState<AnalysisVerdict | null>(null)
   const [scan, setScan] = useState<string | null>(null)
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
@@ -223,6 +228,7 @@ function AppDashboard({ onLogout }: DashboardProps) {
   useEffect(() => {
     setAnalysis(null)
     setAnalysisError(null)
+    setVerdict(null)
   }, [selectedId])
 
   // Lazy fetch item medians on case selection. Cached per-id so re-selecting a
@@ -355,6 +361,7 @@ function AppDashboard({ onLogout }: DashboardProps) {
     if (!selected || !selected.price || !selected.metrics) return
     setAnalyzing(true)
     setAnalysisError(null)
+    setVerdict(null)
     // Cache hit short-circuit: if we've already paid for this exact analysis
     // (same case + same worker snapshot timestamp), serve from localStorage
     // and skip the LLM stream entirely.
@@ -363,13 +370,24 @@ function AppDashboard({ onLogout }: DashboardProps) {
     if (cached) {
       setAnalysis(cached)
       setAnalyzing(false)
+      // Cached payload (Phase 1 shape) may pre-date the verdict-aware path;
+      // verdict stays null. Plan 4 could re-parse cached strings.
       return
     }
     setAnalysis('')
     try {
       const realHistory = (selected.history || []).filter(h => h.source === 'real')
       const historyBlock = formatHistoryBlock(realHistory)
-      const userMsg = `Analyze this case as an investment thesis. Cover: valuation read, supply/demand from pool status, comparable cases in the dataset, key risks, and a directional view (LONG / FLAT / SHORT-AVOID).
+      const fit = fitResults[selected.id]
+      const fitContext = fit && fit.status === 'ok'
+        ? `\n=== DETERMINISTIC FIT MODEL (do not contradict the math; use as input to your verdict reasoning) ===\n` +
+          `liquidity=${Math.round(fit.components.liquidity.score)}, momentum=${Math.round(fit.components.momentum.score)}, ` +
+          `supply_tightness=${Math.round(fit.components.supply_tightness.score)}, content_quality=${Math.round(fit.components.content_quality.score)}, ` +
+          `unbox_ev_ratio=${Math.round(fit.components.unbox_ev_ratio.score)}, crowding_risk=${Math.round(fit.components.crowding_risk.score)}\n` +
+          `Final FIT: ${Math.round(fit.fit)}/100 (confidence: ${fit.confidence})\n`
+        : ''
+
+      const userMsg = `Analyze this case as an investment thesis. Cover: valuation read, supply/demand from pool status, comparable cases in the dataset, key risks, and a directional view (LONG / FLAT / AVOID).
 
 When citing trajectory or trend, use ONLY the time-series block below if it has data. If the time-series is sparse or absent, say so plainly — do not fabricate trends.
 
@@ -379,26 +397,28 @@ Released: ${selected.released} (${selected.metrics.ageYears.toFixed(1)}y old)
 Lowest: $${selected.price.lowest.toFixed(2)} | Median: $${(selected.price.median || 0).toFixed(2)}
 Volume: ${selected.price.volume}
 Notable: ${selected.notable}
-Special items: ${selected.rare}${selected.hasGloves ? ' (incl. gloves)' : ''}
-
+${fitContext}
 === TIME SERIES (real D1 snapshots, this case only) ===
 ${historyBlock}`
-      let full = ''
-      await callClaudeStream(
-        {
-          messages: [{ role: 'user', content: userMsg }],
-          system: ANALYST_SYSTEM + '\n\n=== FULL MARKET CONTEXT ===\n' + marketContext,
-          // Cache the (large, static) system prompt — saves ~90% on subsequent
-          // calls within the cache window when using anthropic/* models.
-          cache_system_prompt: true,
+
+      let proseAccum = ''
+      const result = await streamAnalysis({
+        prompt: userMsg,
+        system: ANALYST_SYSTEM + '\n\n=== FULL MARKET CONTEXT ===\n' + marketContext,
+        // Opts in to the sentinel-injected verdict tail (Worker T28 reads
+        // this and prepends the sentinel-instruction system prompt).
+        structured: true,
+        onProse: (delta) => {
+          proseAccum += delta
+          setAnalysis(proseAccum)
         },
-        delta => {
-          full += delta
-          setAnalysis(full)
-        },
-      )
-      // Only persist successful streams. Errors thrown above skip this.
-      saveAnalysis(selected.id, snapshotKey, full)
+      })
+
+      if (result.verdict) {
+        setVerdict(result.verdict)
+      }
+      // Only persist successful streams (prose only — verdict is in-memory).
+      saveAnalysis(selected.id, snapshotKey, proseAccum)
     } catch (e: any) {
       setAnalysisError(e.message)
     } finally {
@@ -710,11 +730,20 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
                 onSelectPeer={(peerId) => setSelectedId(peerId)}
                 fromScan={lastSelectionSource === 'scan'}
                 onDevilsAdvocate={analyzeCaseDevilsAdvocate}
+                verdict={verdict?.verdict}
+                confidence={verdict?.confidence}
               />
             </div>
           </div>
 
-          <ChatPanel ref={chatRef} marketContext={marketContext} />
+          {/* T37 fold-in: feed the case list into ChatPanel so MentionPopover
+              activates on '@'. Mapped down to {id,name} to avoid leaking
+              ItemFull internals into the chat surface. */}
+          <ChatPanel
+            ref={chatRef}
+            marketContext={marketContext}
+            cases={items.map((i) => ({ id: i.id, name: i.name }))}
+          />
         </div>
       )}
         </main>
