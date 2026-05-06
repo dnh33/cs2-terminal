@@ -8,6 +8,14 @@ interface Props {
   priceAtCommit: number
   verdict?: Verdict
   confidence?: number
+  /**
+   * P2-#6: when true, the COMMIT button is forced disabled regardless of
+   * verdict availability. Set by DetailPanel when the divergence policy
+   * returns status='block' — severe verdict↔FIT disagreement on
+   * low-confidence data means we don't trust either signal enough to log
+   * a decision.
+   */
+  commitBlocked?: boolean
 }
 
 function fmtTime(ms: number): string {
@@ -18,7 +26,7 @@ function fmtTime(ms: number): string {
   return `${date} ${hh}:${mm}`
 }
 
-export function DecisionLog({ caseId, caseName, snapshotAt, priceAtCommit, verdict, confidence }: Props) {
+export function DecisionLog({ caseId, caseName, snapshotAt, priceAtCommit, verdict, confidence, commitBlocked }: Props) {
   const { entries, commit } = useDecisionLog()
   const [pending, setPending] = useState(false)
   const [note, setNote] = useState('')
@@ -41,7 +49,7 @@ export function DecisionLog({ caseId, caseName, snapshotAt, priceAtCommit, verdi
     setNote('')
   }
 
-  const canCommit = verdict !== undefined && confidence !== undefined
+  const canCommit = verdict !== undefined && confidence !== undefined && !commitBlocked
 
   return (
     <div className="px-5 py-4 border-t border-line">

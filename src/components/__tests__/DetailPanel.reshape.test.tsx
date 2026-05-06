@@ -105,12 +105,16 @@ describe('DetailPanel — Decision Log', () => {
 })
 
 describe('DetailPanel — from-scan pill (T36)', () => {
-  it('renders "From this scan" pill when fromScan is true', () => {
+  // P1-#3: pill is now gated on snapshotAt match — pre-existing tests updated
+  // to pass matching scan/current snapshots so they still assert the happy
+  // path. The mismatch / null cases are covered by the dedicated guard tests
+  // below.
+  it('renders "From this scan" pill when fromScan is true and snapshots match', () => {
     const { container } = render(
       <DetailPanel
         item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
         fit={fitOk} peers={[]} onSelectPeer={() => {}}
-        fromScan
+        fromScan scanSnapshotAt={1700} currentSnapshotAt={1700}
       />,
     )
     const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
@@ -169,6 +173,96 @@ describe('DetailPanel — Devil\'s Advocate', () => {
     )
     const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
     expect(within(desktop).queryByRole('button', { name: /devil/i })).not.toBeInTheDocument()
+  })
+})
+
+// P2-#6: divergence chips + commit-blocked. Audit fixes wave B.
+describe('DetailPanel — divergence chips (P2-#6)', () => {
+  it('renders MODEL OVERRIDE chip when divergence.status === "override"', () => {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis="x" analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+        verdict="LONG" confidence={0.78}
+        divergence={{
+          status: 'override', divergence: 45, verdictImplied: 80,
+          reason: 'verdict 80 vs fit 35 = 45',
+        }}
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    expect(within(desktop).getByText('MODEL OVERRIDE')).toBeInTheDocument()
+  })
+
+  it('renders WE DON\'T KNOW chip and disables COMMIT when divergence.status === "block"', () => {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis="x" analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+        verdict="LONG" confidence={0.78}
+        divergence={{
+          status: 'block', divergence: 70, verdictImplied: 80,
+          reason: 'severe disagreement on low-confidence data',
+        }}
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    expect(within(desktop).getByText(/WE DON'T KNOW/)).toBeInTheDocument()
+    // COMMIT button should be disabled even though verdict + confidence are present
+    expect(within(desktop).getByRole('button', { name: /commit/i })).toBeDisabled()
+  })
+
+  it('renders no chip when divergence.status === "ok" or null', () => {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis="x" analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+        verdict="LONG" confidence={0.78}
+        divergence={null}
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    expect(within(desktop).queryByText('MODEL OVERRIDE')).not.toBeInTheDocument()
+    expect(within(desktop).queryByText(/WE DON'T KNOW/)).not.toBeInTheDocument()
+  })
+})
+
+// P1-#3: from-scan pill is now snapshot-aware. Stale scans hide the pill.
+describe('DetailPanel — from-scan snapshotAt guard (P1-#3)', () => {
+  it('shows pill when scanSnapshotAt === currentSnapshotAt', () => {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+        fromScan scanSnapshotAt={1700} currentSnapshotAt={1700}
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    expect(within(desktop).getByText(/FROM THIS SCAN/i)).toBeInTheDocument()
+  })
+
+  it('hides pill when scanSnapshotAt mismatches currentSnapshotAt', () => {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+        fromScan scanSnapshotAt={1600} currentSnapshotAt={1700}
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    expect(within(desktop).queryByText(/FROM THIS SCAN/i)).not.toBeInTheDocument()
+  })
+
+  it('hides pill when scanSnapshotAt is null', () => {
+    const { container } = render(
+      <DetailPanel
+        item={item} onAnalyze={() => {}} analysis={null} analyzing={false} error={null}
+        fit={fitOk} peers={[]} onSelectPeer={() => {}}
+        fromScan scanSnapshotAt={null} currentSnapshotAt={1700}
+      />,
+    )
+    const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
+    expect(within(desktop).queryByText(/FROM THIS SCAN/i)).not.toBeInTheDocument()
   })
 })
 

@@ -11,6 +11,7 @@ import { VerdictBadge } from './VerdictBadge'
 import type { ItemFull } from './CaseTable'
 import type { FitResult } from '../lib/fitScore'
 import type { Verdict } from '../lib/useDecisionLog'
+import type { DivergenceResult } from '../lib/divergence'
 
 interface PeerCandidate {
   id: string
@@ -49,11 +50,28 @@ interface Props {
    * empty state stays clean.
    */
   onDevilsAdvocate?: () => void
+  /**
+   * P2-#6: verdict-FIT divergence policy result. Drives the "MODEL OVERRIDE"
+   * (warning) and "WE DON'T KNOW" (block) chips next to the verdict header,
+   * plus disables the DecisionLog COMMIT button on `block`. `null` =
+   * neutral (verdict and FIT agree, or one of them isn't ready yet).
+   */
+  divergence?: DivergenceResult | null
+  /**
+   * P1-#3: the snapshot timestamp (seconds) captured when the most recent
+   * Market Scan completed. Used together with `currentSnapshotAt` to gate
+   * the "from this scan" pill — we only show the breadcrumb when the scan
+   * still corresponds to the current market state.
+   */
+  scanSnapshotAt?: number | null
+  /** Current worker snapshot timestamp (seconds) — see scanSnapshotAt. */
+  currentSnapshotAt?: number | null
 }
 
 export function DetailPanel({
   item, onAnalyze, analysis, analyzing, error,
   fit, peers, onSelectPeer, verdict, confidence, fromScan, onClose, onDevilsAdvocate,
+  divergence, scanSnapshotAt, currentSnapshotAt,
 }: Props) {
   if (!item) {
     return (
@@ -86,8 +104,14 @@ export function DetailPanel({
         </div>
       </div>
 
-      {/* From-scan pill (T36) — breadcrumb back to the originating scan */}
-      {fromScan && (
+      {/* From-scan pill (T36) — breadcrumb back to the originating scan.
+          P1-#3: gated on the scan's snapshot still matching the current
+          worker snapshot. Once cron rolls forward, the scan is stale and
+          claiming "from this scan" would be a lie, so we hide the pill. */}
+      {fromScan
+        && scanSnapshotAt != null
+        && currentSnapshotAt != null
+        && scanSnapshotAt === currentSnapshotAt && (
         <div className="px-5 py-2 border-b border-line bg-accent-data/[0.04] text-[11px] text-accent-data flex items-center gap-2">
           <span className="font-bold tracking-[0.15em] text-[9px] shrink-0">↳ FROM THIS SCAN</span>
         </div>
@@ -150,6 +174,26 @@ export function DetailPanel({
           <div className="flex items-center gap-3">
             <h3 className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold m-0">// LLM-NATIVE THESIS</h3>
             <VerdictBadge loading={analyzing} verdict={verdict} confidence={confidence} />
+            {/* P2-#6: chip surfaces verdict↔FIT disagreement. 'override' =
+                Claude pushes against the math (warning tone). 'block' =
+                severe disagreement on low-confidence data (err tone) and
+                also gates the DecisionLog COMMIT button below. */}
+            {divergence?.status === 'override' && (
+              <span
+                title={divergence.reason}
+                className="text-[9px] tracking-[0.2em] font-bold px-2 py-0.5 border text-state-warn border-state-warn"
+              >
+                MODEL OVERRIDE
+              </span>
+            )}
+            {divergence?.status === 'block' && (
+              <span
+                title={divergence.reason}
+                className="text-[9px] tracking-[0.2em] font-bold px-2 py-0.5 border text-state-err border-state-err"
+              >
+                WE DON'T KNOW
+              </span>
+            )}
           </div>
           <div className="flex gap-2">
             <button
@@ -192,6 +236,7 @@ export function DetailPanel({
           priceAtCommit={item.price?.lowest ?? 0}
           verdict={verdict}
           confidence={confidence}
+          commitBlocked={divergence?.status === 'block'}
         />
       )}
     </div>
