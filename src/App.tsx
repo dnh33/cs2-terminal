@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 import { useMarketData } from './hooks/useMarketData'
 import { Header } from './components/Header'
 import { Ticker } from './components/Ticker'
@@ -7,7 +7,13 @@ import { CaseTable } from './components/CaseTable'
 import type { SortState, FilterState, ItemFull } from './components/CaseTable'
 import { DetailPanel } from './components/DetailPanel'
 import { MarketScanPanel, ChatPanel, type ChatPanelHandle } from './components/Panels'
-import { PoolIndexChart, VolumePriceScatter } from './components/Charts'
+import { Skeleton } from './components/primitives/Skeleton'
+
+// T10: code-split Charts chunk. P0-1 audit fix — lazy each component
+// independently (returning {default: {A,B}} fails at render with
+// "Element type is invalid"). Vite dedupes the underlying chunk fetch.
+const PoolIndexChart    = lazy(() => import('./components/Charts').then(m => ({ default: m.PoolIndexChart })))
+const VolumePriceScatter = lazy(() => import('./components/Charts').then(m => ({ default: m.VolumePriceScatter })))
 import { MoversPanel } from './components/MoversPanel'
 import { LoginScreen } from './components/LoginScreen'
 import { SkipLink } from './components/primitives/SkipLink'
@@ -786,11 +792,13 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
           </div>
 
           <div data-test="chart-row" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <PoolIndexChart
-              poolIndex={moversResponse?.pool_index ?? { DISCONTINUED: [], RARE: [], ACTIVE: [] }}
-              days={moversDays}
-            />
-            <VolumePriceScatter items={items} onSelect={setSelectedId} selectedId={selectedId} />
+            <Suspense fallback={<Skeleton width="100%" height={240} />}>
+              <PoolIndexChart
+                poolIndex={moversResponse?.pool_index ?? { DISCONTINUED: [], RARE: [], ACTIVE: [] }}
+                days={moversDays}
+              />
+              <VolumePriceScatter items={items} onSelect={setSelectedId} selectedId={selectedId} />
+            </Suspense>
           </div>
 
           <div

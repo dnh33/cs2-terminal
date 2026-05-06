@@ -1,5 +1,9 @@
+import { lazy, Suspense } from 'react'
 import { PoolBadge } from './Atoms'
-import { PriceChart } from './Charts'
+import { Skeleton } from './primitives/Skeleton'
+// T10: lazy-load PriceChart so DetailPanel doesn't pull Charts.tsx into the
+// initial chunk (otherwise App.tsx's lazy() boundaries are no-ops).
+const PriceChart = lazy(() => import('./Charts').then(m => ({ default: m.PriceChart })))
 import { AnalysisOutput } from './AnalysisOutput'
 import { Banner } from './primitives/Banner'
 import { Drawer } from './primitives/Drawer'
@@ -162,7 +166,9 @@ export function DetailPanel({
             {item.history.some((h) => h.source === 'real') ? 'real history from worker' : 'modeled from current px'}
           </span>
         </div>
-        <PriceChart item={item} />
+        <Suspense fallback={<Skeleton width="100%" height={240} />}>
+          <PriceChart item={item} />
+        </Suspense>
       </div>
 
       {/* ROI calc (T24) */}
