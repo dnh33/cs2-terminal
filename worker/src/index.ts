@@ -575,13 +575,14 @@ async function getMovers(env: Env, days: number) {
         FIRST_VALUE(ps.lowest) OVER (PARTITION BY c.id ORDER BY ps.fetched_at ASC)  AS first_price,
         FIRST_VALUE(ps.lowest) OVER (PARTITION BY c.id ORDER BY ps.fetched_at DESC) AS last_price,
         FIRST_VALUE(ps.fetched_at) OVER (PARTITION BY c.id ORDER BY ps.fetched_at DESC) AS last_at,
+        FIRST_VALUE(ps.volume) OVER (PARTITION BY c.id ORDER BY ps.fetched_at DESC) AS last_volume,
         COUNT(*) OVER (PARTITION BY c.id) AS snap_count
       FROM cases c
       JOIN price_snapshots ps ON ps.case_id = c.id
       WHERE ps.fetched_at >= ? AND ps.lowest IS NOT NULL
     )
     SELECT DISTINCT
-      id, name, pool, first_price, last_price, last_at,
+      id, name, pool, first_price, last_price, last_at, last_volume,
       CAST(((last_price - first_price) * 100.0 / NULLIF(first_price, 0)) AS REAL) AS pct_change
     FROM window_data
     WHERE first_price > 0 AND snap_count >= 2
@@ -589,9 +590,19 @@ async function getMovers(env: Env, days: number) {
     LIMIT 20
   `).bind(since).all<{
     id: string; name: string; pool: string;
-    first_price: number; last_price: number; last_at: number; pct_change: number;
+    first_price: number; last_price: number; last_at: number;
+    last_volume: number | null; pct_change: number;
   }>()
-  return result.results || []
+  return (result.results || []).map(r => ({
+    id: r.id,
+    name: r.name,
+    pool: r.pool,
+    first_price: r.first_price,
+    last_price: r.last_price,
+    last_at: r.last_at,
+    last_volume: r.last_volume ?? 0,
+    pct_change: r.pct_change,
+  }))
 }
 
 async function getStats(env: Env) {
