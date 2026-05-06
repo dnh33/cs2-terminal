@@ -31,7 +31,7 @@ export interface FitResult {
   weights: Record<string, number>
   weights_version: string
   algo_version: string
-  inputs_hash: string
+  inputs_hash: string                  // fnv1a-32 hex digest of normalized input vector — collision-acceptable for N=41 pool, calibration-replay key tuple is `(inputs_hash, algo_version)`
   as_of: number
   snapshot_at: number
   pool_size: number
@@ -131,7 +131,7 @@ function momentumScore(current: SnapshotInput, history: SnapshotInput[], asOfSec
   return tanh01(2.5 * (0.6 * r7 + 0.4 * r30))
 }
 
-function supplyTightnessScore(current: SnapshotInput, history: SnapshotInput[], asOfSec: number, pool: Pool): number {
+function supplyTightnessScore(current: SnapshotInput, history: SnapshotInput[], asOfSec: number): number {
   // Days of supply: only computable if listings is known. Steam priceoverview
   // doesn't expose listings — we fall back to volume-derived proxy.
   const listingsNow = current.listings
@@ -169,14 +169,7 @@ function supplyTightnessScore(current: SnapshotInput, history: SnapshotInput[], 
     }
   }
 
-  let base = 0.5 * dosScore + 0.3 * glutScore + 0.2 * trendScore
-
-  // Pool-aware modifier
-  if (pool === 'discontinued' && listingsNow !== undefined && trendScore > 50) {
-    base += 20 * ((trendScore - 50) / 50)
-  }
-  if (pool === 'active') base = base * 0.4
-
+  const base = 0.5 * dosScore + 0.3 * glutScore + 0.2 * trendScore
   return clip(base)
 }
 
@@ -257,7 +250,7 @@ export function computeFit(inputs: FitInputs): FitResult {
   // Compute components
   const liquidity = { raw: current.volume, score: clip(liquidityScore(current)) }
   const momentum = { raw: 0, score: clip(momentumScore(current, sortedHistory, now)) }
-  const supply_tightness = { raw: 0, score: clip(supplyTightnessScore(current, sortedHistory, now, case_.pool)) }
+  const supply_tightness = { raw: 0, score: clip(supplyTightnessScore(current, sortedHistory, now)) }
   const cqRaw = contentQuality(CASE_CONTENT[case_.id] ?? { knife: 0, glove: 0, knife_tier: 0, multi_knife: 0, notable_pattern: 0 })
   const content_quality = { raw: cqRaw, score: cqRaw }
   const unbox_ev_ratio = { raw: 0, score: clip(unboxEvRatio(current, items)) }

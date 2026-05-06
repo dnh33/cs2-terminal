@@ -132,6 +132,46 @@ describe('computeFit', () => {
     })
   })
 
+  describe('audit P1-#1 regression: no per-pool supply_tightness multipliers', () => {
+    // Spec (case-sniper-fit-framework.md §3): supply_tightness is a pure
+    // weighted average `0.5*dos + 0.3*glut + 0.2*trend` with NO pool-aware
+    // modifiers. Prior implementation silently multiplied active-pool by 0.4
+    // and added a discontinued-pool trend bonus. Both deleted.
+    it('active pool supply_tightness equals weighted-average formula (no 0.4x dampener)', () => {
+      const result = computeFit(baseInputs({
+        case_: { id: 'recoil-case', pool: 'active', notable: null },
+      }))
+      // Under the deleted `base * 0.4` multiplier this would have been ≤ ~24.
+      // Spec formula yields ≈ 58 for these inputs (volume-fallback dos ≈ 37,
+      // glut ≈ 100 clipped, trend = 50 no-listings default).
+      expect(result.components.supply_tightness.score).toBeGreaterThan(50)
+    })
+
+    it('discontinued pool supply_tightness has no trend-bonus when listings absent', () => {
+      // The deleted discontinued-pool branch only fired when listings was
+      // defined; with listings undefined, behavior is unchanged. Sanity check
+      // the formula still produces the spec'd weighted average.
+      const result = computeFit(baseInputs({
+        case_: { id: 'glove-case', pool: 'discontinued', notable: 'gloves' },
+      }))
+      expect(result.components.supply_tightness.score).toBeGreaterThan(50)
+      expect(result.components.supply_tightness.score).toBeLessThanOrEqual(100)
+    })
+
+    it('active and discontinued pools share identical supply_tightness for identical snapshot inputs', () => {
+      // Direct consequence of removing the `pool === 'active'` × 0.4 branch:
+      // supply_tightness must now be pool-invariant. Pool only affects the
+      // outer weighted sum + the 55-cap, never this component.
+      const active = computeFit(baseInputs({
+        case_: { id: 'recoil-case', pool: 'active', notable: null },
+      }))
+      const disc = computeFit(baseInputs({
+        case_: { id: 'glove-case', pool: 'discontinued', notable: 'gloves' },
+      }))
+      expect(active.components.supply_tightness.score).toBe(disc.components.supply_tightness.score)
+    })
+  })
+
   describe('determinism', () => {
     it('same inputs produce same fit and inputs_hash', () => {
       const a = computeFit(baseInputs())
