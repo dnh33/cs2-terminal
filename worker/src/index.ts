@@ -35,6 +35,7 @@ import {
   type PoolIndexSeries,
   type SnapshotRow as PoolIndexRow,
 } from './handlers/movers'
+import { handleCronRecent } from './handlers/cronRecent'
 
 export interface Env {
   DB: D1Database
@@ -1255,6 +1256,13 @@ export default {
         }
 
         return jsonResponse({ days, movers: rows, pool_index: poolIndex }, env)
+      }
+
+      // Cron recent — last N case-tier cron runs for SystemStatus sparkline.
+      // Bearer-gated alongside /latest per spec § 2.1.G.
+      if (url.pathname === '/cron/recent' && request.method === 'GET') {
+        const data = await handleCronRecent(url, env)
+        return jsonResponse(data, env)
       }
 
       // /api/items/medians?caseId=glove-case
