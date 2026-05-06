@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { callClaudeStream, ANALYST_SYSTEM } from '../lib/api'
 import { AnalysisOutput } from './AnalysisOutput'
+import { ScanOutput } from './ScanOutput'
 import { StatusDot } from './Atoms'
 import { Banner } from './primitives/Banner'
 import { C } from '../lib/theme'
@@ -12,9 +13,10 @@ interface ScanProps {
   scan: string | null
   scanning: boolean
   error: string | null
+  onSelectCase?: (caseId: string) => void
 }
 
-export function MarketScanPanel({ items, onScan, scan, scanning, error }: ScanProps) {
+export function MarketScanPanel({ items, onScan, scan, scanning, error, onSelectCase }: ScanProps) {
   const enabled = items.filter(i => i.price).length >= 5
   return (
     <div className="bg-bg-1 border border-line px-5 py-4 mb-4">
@@ -39,7 +41,15 @@ export function MarketScanPanel({ items, onScan, scan, scanning, error }: ScanPr
       </div>
       {error && <Banner variant="error" className="mb-3">{error}</Banner>}
       {scan ? (
-        <AnalysisOutput text={scan} />
+        onSelectCase ? (
+          <ScanOutput
+            text={scan}
+            cases={items.map(i => ({ id: i.id, name: i.name }))}
+            onSelect={onSelectCase}
+          />
+        ) : (
+          <AnalysisOutput text={scan} />
+        )
       ) : !scanning ? (
         <div className="text-[11px] text-ink-3 p-6 border border-dashed border-line-bright text-center tracking-[0.1em]">
           Reads every tracked case and produces ranked picks: best value plays, momentum candidates, traps to avoid, capital allocation.
