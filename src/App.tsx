@@ -80,7 +80,20 @@ type AuthState =
  * accordingly. Listens for AuthRequiredError thrown deep in the API client
  * (e.g. token expired mid-session) and bumps the user back to the login screen.
  */
+// Spec preview route bypasses auth — public showcase of design specs.
+// See src/spec/ for showcases. Pathname check happens before any auth probe.
+const SpecRoute = lazy(() => import('./spec/HypothesisLedgerShowcase'))
+
 export default function AppGate() {
+  // Public spec-preview route — no auth, no worker calls
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/spec/hypothesis-ledger')) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-bg-0" aria-busy />}>
+        <SpecRoute />
+      </Suspense>
+    )
+  }
+
   const [auth, setAuth] = useState<AuthState>({ status: 'loading' })
 
   async function probe() {
