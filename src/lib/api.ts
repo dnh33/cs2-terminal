@@ -227,8 +227,14 @@ export interface CronRecentResponse {
   runs: CronRecentRun[]
 }
 
-export async function fetchCronRecent(n = 24): Promise<CronRecentResponse> {
-  return jsonGet<CronRecentResponse>(`/cron/recent?n=${n}`)
+export type CronKind = 'case' | 'item_high' | 'item_low'
+
+export async function fetchCronRecent(
+  n = 24,
+  kind?: CronKind,
+): Promise<CronRecentResponse> {
+  const kindQS = kind && kind !== 'case' ? `&kind=${kind}` : ''
+  return jsonGet<CronRecentResponse>(`/cron/recent?n=${n}${kindQS}`)
 }
 
 /** Trigger an on-demand refresh of any stale cases. */
