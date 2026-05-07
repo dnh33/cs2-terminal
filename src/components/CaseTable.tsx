@@ -1,8 +1,10 @@
+import { useEffect, useRef, useState } from 'react'
 import type { CaseRecord, Pool } from '../lib/cases'
 import type { PriceData, Metrics, PricePoint } from '../lib/metrics'
 import { PoolBadge, MiniSparkline } from './Atoms'
 import { KbdRow, KbdSortHeader } from './primitives/KeyboardTable'
 import { Skeleton } from './primitives/Skeleton'
+import { usePrevious } from '../lib/usePrevious'
 
 export interface ItemFull extends CaseRecord {
   price: PriceData | null
@@ -24,6 +26,33 @@ interface RowProps {
 function CaseRow({ item, idx, selected, onClick }: RowProps) {
   const m = item.metrics, p = item.price
   const bg = selected ? 'rgba(232,104,26,0.08)' : 'transparent'
+
+  // P0-4 audit fix: strengthened initial-load guard — first real price after `null` would flash UP for
+  // every row. `prevPrice == null || item.price?.lowest == null` early-return prevents that.
+  const prevPrice = usePrevious(item.price?.lowest)
+  const [flash, setFlash] = useState<'up' | 'down' | null>(null)
+  const flashElRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const cur = item.price?.lowest
+    if (prevPrice == null || cur == null) return
+    if (prevPrice === cur) return
+    setFlash(cur > prevPrice ? 'up' : 'down')
+  }, [item.price?.lowest, prevPrice])
+
+  // P2-1 fix: native animationend listener — React 19 synthetic delegation for animation events
+  // is unreliable under jsdom and varies across browsers. Filter by animationName to avoid bubbled
+  // descendant animations clearing prematurely.
+  useEffect(() => {
+    const el = flashElRef.current
+    if (!el) return
+    const onEnd = (e: Event) => {
+      const name = (e as AnimationEvent).animationName
+      if (!name || name === 'flash-up' || name === 'flash-down') setFlash(null)
+    }
+    el.addEventListener('animationend', onEnd)
+    return () => el.removeEventListener('animationend', onEnd)
+  }, [])
 
   return (
     <KbdRow
@@ -70,7 +99,11 @@ function CaseRow({ item, idx, selected, onClick }: RowProps) {
           </div>
         </div>
         <PoolBadge pool={item.pool} />
-        <div className="t-data-bold text-ink-0">
+        <div
+          ref={flashElRef}
+          className="t-data-bold text-ink-0 num-flip tabular-nums"
+          data-flash={flash ?? undefined}
+        >
           {p ? `$${p.lowest.toFixed(2)}` : <span className="text-ink-3 text-[11px]">—</span>}
         </div>
         <div className="text-ink-1">{p ? `$${(p.median || 0).toFixed(2)}` : '—'}</div>
