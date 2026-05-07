@@ -5,6 +5,7 @@ import { PoolBadge } from './Atoms'
 import { C } from '../lib/theme'
 import { KbdRow } from './primitives/KeyboardTable'
 import { Banner } from './primitives/Banner'
+import { NumberFlip } from './primitives/NumberFlip'
 
 const WINDOWS: { label: string; days: number }[] = [
   { label: '24H', days: 1 },
@@ -116,7 +117,9 @@ function MoverList({
                 <PoolBadge pool={r.pool} />
                 <div className="min-w-0">
                   <div className="text-[12px] text-ink-0 truncate">{r.name}</div>
-                  <div className="text-[10px] text-ink-2">${r.last_price.toFixed(2)} from ${r.first_price.toFixed(2)}</div>
+                  <div className="text-[10px] text-ink-2">
+                    <NumberFlip value={r.last_price} prefix="$" decimals={2} /> from <NumberFlip value={r.first_price} prefix="$" decimals={2} flashOnChange={false} />
+                  </div>
                 </div>
               </div>
               <div
@@ -124,11 +127,11 @@ function MoverList({
                 data-testid="mover-row-volume"
                 style={{ color: volColor }}
               >
-                {hasVol ? vol!.toLocaleString('en-US') : '—'}
+                {hasVol ? <NumberFlip value={vol!} formatter={(n) => n.toLocaleString('en-US')} /> : '—'}
                 <div className="text-[8px] text-ink-3 tracking-[0.15em] uppercase">vol/24h</div>
               </div>
               <div className="font-display text-[18px] shrink-0" style={{ color: accent }}>
-                {r.pct_change > 0 ? '+' : ''}{r.pct_change.toFixed(1)}%
+                {r.pct_change > 0 ? '+' : ''}<NumberFlip value={r.pct_change} suffix="%" decimals={1} />
               </div>
             </KbdRow>
           )
