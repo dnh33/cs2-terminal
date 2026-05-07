@@ -23,6 +23,7 @@ vi.mock('../lib/api', async () => {
     checkAuth: async () => ({ authenticated: true, auth_required: false }),
     logout: vi.fn(),
     fetchMovers: async () => ({ days: 7, movers: [] }),
+    fetchCronRecent: vi.fn().mockResolvedValue({ runs: [] }),
   }
 })
 

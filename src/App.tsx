@@ -264,14 +264,31 @@ function AppDashboard({ onLogout }: DashboardProps) {
   // window-pill behavior stay untouched). The chart uses its own 30D window.
   const [moversResponse, setMoversResponse] = useState<MoversResponse | null>(null)
   const moversDays = 30
-  // T12: SystemStatus footer — last 24 case-sweep runs, refreshed every 60s.
-  const [cronRecent, setCronRecent] = useState<CronRecentRun[]>([])
+  // T12 + Plan 5 T4: SystemStatus footer — 3-tier sparkline cluster
+  // (case / item-high / item-low), refreshed every 60s. Each tier is fetched
+  // independently via Promise.allSettled so one failing tier doesn't stall the
+  // others. Per-tier `failX` flags drive the "// ENDPOINT FAIL" muted state.
+  const [cronCase, setCronCase] = useState<CronRecentRun[]>([])
+  const [cronHi, setCronHi] = useState<CronRecentRun[]>([])
+  const [cronLo, setCronLo] = useState<CronRecentRun[]>([])
+  const [failCase, setFailCase] = useState(false)
+  const [failHi, setFailHi] = useState(false)
+  const [failLo, setFailLo] = useState(false)
   useEffect(() => {
     let alive = true
-    const tick = () => {
-      fetchCronRecent(24)
-        .then(r => { if (alive) setCronRecent(r.runs) })
-        .catch(() => { /* leave previous bars */ })
+    const tick = async () => {
+      const results = await Promise.allSettled([
+        fetchCronRecent(24, 'case'),
+        fetchCronRecent(24, 'item_high'),
+        fetchCronRecent(24, 'item_low'),
+      ])
+      if (!alive) return
+      if (results[0].status === 'fulfilled') { setCronCase(results[0].value.runs); setFailCase(false) }
+      else { setFailCase(true) }
+      if (results[1].status === 'fulfilled') { setCronHi(results[1].value.runs); setFailHi(false) }
+      else { setFailHi(true) }
+      if (results[2].status === 'fulfilled') { setCronLo(results[2].value.runs); setFailLo(false) }
+      else { setFailLo(true) }
     }
     tick()
     const int = setInterval(tick, 60_000)
@@ -1020,10 +1037,18 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
                 )}
               </div>
             )}
-            {/* T12: 24-bar case-sweep sparkline (60s polling). */}
-            <div className="mt-3 flex items-center gap-3 text-[10px] text-ink-3 tracking-[0.15em]">
-              <span>// CRON × 24</span>
-              <SystemStatus runs={cronRecent} />
+            {/* T12 + Plan 5 T4: 3-tier sparkline cluster (60s polling). Caption
+                stacked above the cluster so per-tier row labels stay aligned. */}
+            <div className="mt-3 text-[10px] text-ink-3 tracking-[0.15em]">
+              <div className="mb-1">// CRON × 24</div>
+              <SystemStatus
+                runsCase={cronCase}
+                runsHi={cronHi}
+                runsLo={cronLo}
+                failCase={failCase}
+                failHi={failHi}
+                failLo={failLo}
+              />
             </div>
           </div>
         </footer>
