@@ -8,6 +8,7 @@ import {
   type Hypothesis,
 } from '../useHypothesisLedger'
 import * as api from '../api'
+import { CASE_DB } from '../cases'
 
 const HYPO_TODAY: Hypothesis = {
   id: 'h-today',
@@ -128,20 +129,38 @@ describe('hypothesisResolverPass', () => {
     expect(typeof after[0].lastAttemptAt).toBe('number')
   })
 
-  it('unknown_case is recoverable: a later pass with case in CASE_DB resolves it', async () => {
-    // Simulate the "Valve announces a new case Daniel had a placeholder hypothesis for"
-    // scenario. First pass: caseId missing → unknown_case marker. Second pass:
-    // CASE_DB lookup succeeds (mocked by using 'glove' which IS in CASE_DB) →
-    // resolution computed normally.
+  it('unknown_case is recoverable: pass1 marks transient when CASE_DB miss, pass2 resolves HIT after CASE_DB grows', async () => {
+    // Two-pass scenario locking the actual recovery contract:
+    //   Pass 1 — simulate "caseId not yet in CASE_DB" via spy returning undefined ONCE.
+    //   Resolver short-circuits to transient unknown_case marker, NOT a permanent
+    //   STALE write. Resolution stays null. No fetch.
+    //   Pass 2 — spy auto-passes through (mockReturnValueOnce only intercepts one call).
+    //   CASE_DB.find returns the real glove caseDef → fetch fires → resolves HIT.
+    //   lastAttemptError clears.
+    // If the resolver had written permanent STALE in pass 1, pass 2 would skip the
+    // entry (already resolved) and the recovery would be impossible.
     setLedger([{ ...HYPO_TODAY, id: 'a', caseId: 'glove', targetDate: '2026-06-14' }])
+    const findSpy = vi.spyOn(CASE_DB, 'find').mockReturnValueOnce(undefined)
     const fetchSpy = vi.spyOn(api, 'fetchHistory').mockResolvedValue([
       { date: '2026-06-14', price: 290, source: 'real' as const },
     ])
+
+    // Pass 1: CASE_DB miss → transient marker
     await runResolverPass()
-    const after = readLedger()
-    expect(after[0].resolution?.outcome).toBe('HIT')
-    expect(after[0].lastAttemptError).toBeNull()
+    const afterPass1 = readLedger()
+    expect(afterPass1[0].resolution).toBeNull()
+    expect(afterPass1[0].lastAttemptError).toBe('unknown_case')
+    expect(fetchSpy).not.toHaveBeenCalled()
+
+    // Pass 2: bypass 30s gate, spy passes through, real lookup succeeds → HIT
+    __resetResolverPassForTests()
+    await runResolverPass()
+    const afterPass2 = readLedger()
+    expect(afterPass2[0].resolution?.outcome).toBe('HIT')
+    expect(afterPass2[0].lastAttemptError).toBeNull()
     expect(fetchSpy).toHaveBeenCalledTimes(1)
+
+    findSpy.mockRestore()
   })
 
   it('concurrent commit during pass: matured new entry preserved (merge-aware write)', async () => {
