@@ -1,6 +1,7 @@
 import { lazy, Suspense, useRef } from 'react'
 import { PoolBadge } from './Atoms'
 import { Skeleton } from './primitives/Skeleton'
+import { NumberFlip } from './primitives/NumberFlip'
 // T10: lazy-load PriceChart so DetailPanel doesn't pull Charts.tsx into the
 // initial chunk (otherwise App.tsx's lazy() boundaries are no-ops).
 const PriceChart = lazy(() => import('./Charts').then(m => ({ default: m.PriceChart })))
@@ -138,18 +139,24 @@ export function DetailPanel({
         <div className="grid grid-cols-3 border-b border-line">
           <div className="px-5 py-3.5 border-r border-line">
             <div className="text-[9px] tracking-[0.2em] text-ink-2">LOWEST ASK</div>
-            <div className="font-display text-[28px] text-accent-sel leading-tight">${p.lowest.toFixed(2)}</div>
-            <div className="text-[10px] text-ink-2">median ${(p.median || 0).toFixed(2)}</div>
+            <div className="font-display text-[28px] text-accent-sel leading-tight">
+              <NumberFlip value={p.lowest} prefix="$" decimals={2} />
+            </div>
+            <div className="text-[10px] text-ink-2">
+              median <NumberFlip value={p.median || 0} prefix="$" decimals={2} />
+            </div>
           </div>
           <div className="px-5 py-3.5 border-r border-line">
             <div className="text-[9px] tracking-[0.2em] text-ink-2">24H VOLUME</div>
-            <div className="font-display text-[28px] text-accent-data leading-tight">{p.volume.toLocaleString()}</div>
+            <div className="font-display text-[28px] text-accent-data leading-tight">
+              <NumberFlip value={p.volume} formatter={(n) => n.toLocaleString('en-US')} />
+            </div>
             <div className="text-[10px] text-ink-2">units sold</div>
           </div>
           <div className="px-5 py-3.5">
             <div className="text-[9px] tracking-[0.2em] text-ink-2">BREAK-EVEN</div>
             <div className="font-display text-[28px] text-ink-0 leading-tight">
-              ${(m?.breakeven || 0).toFixed(2)}
+              <NumberFlip value={m?.breakeven || 0} prefix="$" decimals={2} />
             </div>
             <div className="text-[10px] text-ink-2">after 15% fee</div>
           </div>
