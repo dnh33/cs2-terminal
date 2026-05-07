@@ -8,7 +8,8 @@ vi.mock('../../lib/api', () => ({
 
 import { fetchMovers } from '../../lib/api'
 import { MoversPanel } from '../MoversPanel'
-import { PriceChart, VolumePriceScatter } from '../Charts'
+import { PriceChart } from '../charts/PriceChart'
+import { VolumePriceScatter } from '../charts/VolumePriceScatter'
 import type { ItemFull } from '../CaseTable'
 
 const movers = [

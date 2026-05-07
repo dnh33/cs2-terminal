@@ -4,7 +4,7 @@ import { Skeleton } from './primitives/Skeleton'
 import { NumberFlip } from './primitives/NumberFlip'
 // T10: lazy-load PriceChart so DetailPanel doesn't pull Charts.tsx into the
 // initial chunk (otherwise App.tsx's lazy() boundaries are no-ops).
-const PriceChart = lazy(() => import('./Charts').then(m => ({ default: m.PriceChart })))
+const PriceChart = lazy(() => import('./charts/PriceChart').then(m => ({ default: m.PriceChart })))
 import { Reticle } from './Reticle'
 import type { LWChartRef } from './primitives/LWChart'
 import { AnalysisOutput } from './AnalysisOutput'

@@ -14,8 +14,8 @@ import { Skeleton } from './components/primitives/Skeleton'
 // T10: code-split Charts chunk. P0-1 audit fix — lazy each component
 // independently (returning {default: {A,B}} fails at render with
 // "Element type is invalid"). Vite dedupes the underlying chunk fetch.
-const PoolIndexChart    = lazy(() => import('./components/Charts').then(m => ({ default: m.PoolIndexChart })))
-const VolumePriceScatter = lazy(() => import('./components/Charts').then(m => ({ default: m.VolumePriceScatter })))
+const PoolIndexChart    = lazy(() => import('./components/charts/PoolIndexChart').then(m => ({ default: m.PoolIndexChart })))
+const VolumePriceScatter = lazy(() => import('./components/charts/VolumePriceScatter').then(m => ({ default: m.VolumePriceScatter })))
 import { MoversPanel } from './components/MoversPanel'
 import { LoginScreen } from './components/LoginScreen'
 import { SkipLink } from './components/primitives/SkipLink'
