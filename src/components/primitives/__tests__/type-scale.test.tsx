@@ -22,11 +22,11 @@ describe('type scale utilities', () => {
     expect(rootCs().getPropertyValue('--font-display').toLowerCase()).toContain('bebas')
   })
 
-  it('applies prose body class with DM Sans', () => {
+  it('applies prose body class with Source Serif 4', () => {
     render(<p className="t-body" data-testid="body">analysis prose</p>)
     const el = screen.getByTestId('body')
     expect(getComputedStyle(el).fontFamily).toBe('var(--font-prose)')
-    expect(rootCs().getPropertyValue('--font-prose').toLowerCase()).toContain('dm sans')
+    expect(rootCs().getPropertyValue('--font-prose').toLowerCase()).toContain('source serif')
   })
 
   it('applies tabular-nums on data utility', () => {
