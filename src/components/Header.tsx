@@ -32,7 +32,7 @@ export function Header({ fetching, stats, onLogout, onOpenCmdK }: Props) {
     <header className="border-b border-line bg-bg-1 px-5 py-3 sticky top-0 z-50 backdrop-blur">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
-          <StatusSigil status={status} />
+          <StatusSigil status={status} lastCronTick={stats?.last_cron?.started_at} />
           <div>
             <h1 className="t-display-2 text-ink-0 m-0">CASE SNIPER</h1>
             <LiveRegion politeness="polite" className="t-micro text-ink-2" as="div">
