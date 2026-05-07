@@ -57,12 +57,24 @@ function ProseBlock({ text }: { text: string }) {
 
 export function AnalysisOutput({ text, caseId, snapshotAt }: Props) {
   // P0-1 audit fix: asymmetric cache keys.
-  // Normal:  cs-analysis:${id}:${snap}        (NO v2: segment — see persist.ts)
+  // Normal:  cs-analysis:v2:${id}:${snap}     (Plan 4: unified to v2 shape)
   // Devil:   cs-analysis-devil:v2:${id}:${snap}
+  // One-shot v1→v2 migration on legacy reads (see normalCache below).
   const { normalCache, devilCache } = useMemo(() => {
     if (!caseId || snapshotAt === undefined) return { normalCache: null, devilCache: null }
     return {
-      normalCache: readCache(`cs-analysis:${caseId}:${snapshotAt}`),
+      normalCache: readCache(`cs-analysis:v2:${caseId}:${snapshotAt}`)
+        ?? (() => {
+            // One-shot v1→v2 migration: read legacy key, copy to v2, delete legacy.
+            const legacy = readCache(`cs-analysis:${caseId}:${snapshotAt}`)
+            if (legacy) {
+              try {
+                localStorage.setItem(`cs-analysis:v2:${caseId}:${snapshotAt}`, legacy)
+                localStorage.removeItem(`cs-analysis:${caseId}:${snapshotAt}`)
+              } catch { /* quota/private mode — leave legacy in place */ }
+            }
+            return legacy
+          })(),
       devilCache: readCache(`cs-analysis-devil:v2:${caseId}:${snapshotAt}`),
     }
   }, [caseId, snapshotAt])

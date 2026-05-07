@@ -22,21 +22,37 @@ describe('AnalysisOutput devil flip pill', () => {
   })
 
   it('renders flip pill when both caches exist', () => {
-    // P0-1: real keys — normal has NO v2: segment, devil DOES.
-    localStorage.setItem('cs-analysis:glove:100', 'normal text')
+    // Plan 4: both keys now share the v2 shape.
+    localStorage.setItem('cs-analysis:v2:glove:100', 'normal text')
     localStorage.setItem('cs-analysis-devil:v2:glove:100', 'devil text')
     const { getByRole } = render(<AnalysisOutput text="normal text" caseId="glove" snapshotAt={100} />)
     expect(getByRole('tablist')).toBeTruthy()
   })
 
+  it('reads v1 cache via one-shot migration to v2', () => {
+    // Seed legacy key only — no v2 key exists.
+    localStorage.setItem('cs-analysis:glove:100', 'legacy text')
+    // Devil cache also seeded so flip-pill activates and 'legacy text' actually renders
+    // (component shows fallback `text` prop when only one cache exists).
+    localStorage.setItem('cs-analysis-devil:v2:glove:100', 'devil text')
+
+    render(<AnalysisOutput text="placeholder" caseId="glove" snapshotAt={100} />)
+
+    // After render, migration must have copied legacy → v2 and deleted legacy.
+    expect(localStorage.getItem('cs-analysis:v2:glove:100')).toBe('legacy text')
+    expect(localStorage.getItem('cs-analysis:glove:100')).toBeNull()
+    // Devil cache untouched.
+    expect(localStorage.getItem('cs-analysis-devil:v2:glove:100')).toBe('devil text')
+  })
+
   it('hides pill when only one cache exists', () => {
-    localStorage.setItem('cs-analysis:glove:100', 'normal text')
+    localStorage.setItem('cs-analysis:v2:glove:100', 'normal text')
     const { queryByRole } = render(<AnalysisOutput text="normal text" caseId="glove" snapshotAt={100} />)
     expect(queryByRole('tablist')).toBeNull()
   })
 
   it('hides pill when caseId or snapshotAt missing', () => {
-    localStorage.setItem('cs-analysis:glove:100', 'normal text')
+    localStorage.setItem('cs-analysis:v2:glove:100', 'normal text')
     localStorage.setItem('cs-analysis-devil:v2:glove:100', 'devil text')
     const { queryByRole } = render(<AnalysisOutput text="normal text" />)
     expect(queryByRole('tablist')).toBeNull()

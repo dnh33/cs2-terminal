@@ -20,7 +20,7 @@ describe('persist analyses', () => {
 
   it('uses a stable key format including caseId and snapshotAt', () => {
     saveAnalysis('chroma', 42, 'x')
-    expect(localStorage.getItem('cs-analysis:chroma:42')).toBe('x')
+    expect(localStorage.getItem('cs-analysis:v2:chroma:42')).toBe('x')
   })
 })
 

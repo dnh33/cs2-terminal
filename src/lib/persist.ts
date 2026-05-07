@@ -9,7 +9,7 @@
  *   quota exceeded, corrupted JSON) must never crash the app.
  */
 
-const ANALYSIS_PREFIX = 'cs-analysis:'
+const ANALYSIS_PREFIX = 'cs-analysis:v2:'
 const SCAN_KEY = 'cs-last-scan'
 
 export function saveAnalysis(caseId: string, snapshotAt: number, text: string): void {
