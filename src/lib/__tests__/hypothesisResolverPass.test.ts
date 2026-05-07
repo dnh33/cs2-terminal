@@ -114,13 +114,34 @@ describe('hypothesisResolverPass', () => {
     expect(typeof after[0].lastAttemptAt).toBe('number')
   })
 
-  it('caseId not in CASE_DB → permanent STALE without fetch', async () => {
+  it('caseId not in CASE_DB → transient unknown_case marker, NOT permanent STALE, no fetch', async () => {
     setLedger([{ ...HYPO_TODAY, id: 'a', caseId: 'NOT_A_REAL_CASE', targetDate: '2026-06-14' }])
     const fetchSpy = vi.spyOn(api, 'fetchHistory').mockResolvedValue([])
     await runResolverPass()
     expect(fetchSpy).not.toHaveBeenCalled()
     const after = readLedger()
-    expect(after[0].resolution?.outcome).toBe('STALE')
+    // resolution stays null so a future pass (after CASE_DB grows) can re-resolve.
+    // Permanent STALE here would be a one-way door — corruption survives Phase 5
+    // D1 retrofit and can never be un-resolved.
+    expect(after[0].resolution).toBeNull()
+    expect(after[0].lastAttemptError).toBe('unknown_case')
+    expect(typeof after[0].lastAttemptAt).toBe('number')
+  })
+
+  it('unknown_case is recoverable: a later pass with case in CASE_DB resolves it', async () => {
+    // Simulate the "Valve announces a new case Daniel had a placeholder hypothesis for"
+    // scenario. First pass: caseId missing → unknown_case marker. Second pass:
+    // CASE_DB lookup succeeds (mocked by using 'glove' which IS in CASE_DB) →
+    // resolution computed normally.
+    setLedger([{ ...HYPO_TODAY, id: 'a', caseId: 'glove', targetDate: '2026-06-14' }])
+    const fetchSpy = vi.spyOn(api, 'fetchHistory').mockResolvedValue([
+      { date: '2026-06-14', price: 290, source: 'real' as const },
+    ])
+    await runResolverPass()
+    const after = readLedger()
+    expect(after[0].resolution?.outcome).toBe('HIT')
+    expect(after[0].lastAttemptError).toBeNull()
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
   })
 
   it('concurrent commit during pass: matured new entry preserved (merge-aware write)', async () => {

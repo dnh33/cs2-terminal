@@ -50,18 +50,20 @@ async function doResolverPass(): Promise<void> {
   }
 
   const computedResolutions = new Map<string, Resolution>()
-  const computedAttempts = new Map<string, { attemptAt: number; error: 'network' | null }>()
+  const computedAttempts = new Map<string, { attemptAt: number; error: 'network' | 'unknown_case' | null }>()
 
   for (const [caseId, hypotheses] of byCase) {
     const caseDef = CASE_DB.find(c => c.id === caseId)
     if (!caseDef) {
+      // CASE_DB miss: TRANSIENT marker, NOT permanent STALE. A permanent STALE
+      // write here is a one-way door — it survives Phase 5's D1 retrofit and
+      // can't be retroactively un-resolved if the case re-appears (e.g., Daniel
+      // adds a Valve-announced case that a hypothesis was committed for under
+      // a placeholder id). Leave resolution null; record lastAttemptError so
+      // the next pass after CASE_DB grows can re-resolve.
+      const attemptAt = Date.now()
       for (const h of hypotheses) {
-        computedResolutions.set(h.id, {
-          outcome: 'STALE',
-          resolvedAt: Date.now(),
-          resolverVersion: 1,
-          observed: null,
-        })
+        computedAttempts.set(h.id, { attemptAt, error: 'unknown_case' })
       }
       continue
     }

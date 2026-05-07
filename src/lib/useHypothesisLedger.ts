@@ -27,7 +27,7 @@ export interface Hypothesis {
   note: string                   // ≤200
   resolution: Resolution | null
   lastAttemptAt?: number
-  lastAttemptError?: 'network' | null
+  lastAttemptError?: 'network' | 'unknown_case' | null
 }
 
 export interface HypothesisLedgerState {
