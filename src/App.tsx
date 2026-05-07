@@ -42,6 +42,7 @@ import { useSelectedCase } from './lib/useSelectedCase'
 import { C } from './lib/theme'
 import { computeFit, type FitResult } from './lib/fitScore'
 import { fetchItemMedians, type ItemMediansResponse } from './lib/itemMedians'
+import { runResolverPass } from './lib/hypothesisResolverPass'
 
 // Worker URL precedence mirrors src/lib/api.ts so telemetry POST hits the
 // same origin as the rest of the API.
@@ -206,6 +207,18 @@ function formatDeltaTable(m7: MoverLite[], m30: MoverLite[], m90: MoverLite[]): 
 
 function AppDashboard({ onLogout }: DashboardProps) {
   const { items, fetching, lastUpdated, fetchError, stats, fetchAll, loadDemo, loadRealHistory } = useMarketData()
+
+  // Phase 4 Plan 1: Hypothesis Ledger resolver pass — runs once on mount + on
+  // visibilitychange→visible. Mounted INSIDE AppDashboard so auth is guaranteed
+  // (resolver makes /history calls; outside the auth gate they'd 401-spam).
+  useEffect(() => {
+    runResolverPass()
+    function onVis() {
+      if (document.visibilityState === 'visible') runResolverPass()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [])
 
   const [urlSelectedId, setSelectedIdRaw] = useSelectedCase()
   // P3-T36: track whether the most recent selection came from a CaseChip in
