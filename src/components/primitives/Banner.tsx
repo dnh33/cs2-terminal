@@ -28,7 +28,7 @@ export function Banner({ variant, children, action, className }: Props) {
       <span className="t-label" style={{ color: VAR_COLOR[variant] }}>
         {variant === 'error' ? '! ERR' : variant === 'warn' ? '⚠ WARN' : 'ℹ INFO'}
       </span>
-      <span className="flex-1">{children}</span>
+      <span className="flex-1 font-prose">{children}</span>
       {action && (
         <button
           type="button"

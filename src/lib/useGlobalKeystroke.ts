@@ -6,7 +6,7 @@ interface Handlers {
   onEsc?: () => void
 }
 
-function isInputFocused(): boolean {
+export function isInputFocused(): boolean {
   const el = document.activeElement
   if (!el) return false
   const tag = el.tagName

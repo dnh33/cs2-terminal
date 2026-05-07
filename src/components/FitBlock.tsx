@@ -1,4 +1,5 @@
 import type { FitResult, FitComponent } from '../lib/fitScore'
+import { NumberFlip } from './primitives/NumberFlip'
 
 interface Props {
   result: FitResult
@@ -39,7 +40,6 @@ export function FitBlock({ result }: Props) {
   if (result.status === 'stale_data') return null
 
   const insufficient = result.status === 'insufficient_history'
-  const fitDisplay = insufficient ? '--' : Math.round(result.fit).toString()
   const fitColorVal = insufficient ? 'var(--ink-3)' : fitColor(result.fit)
 
   return (
@@ -54,7 +54,9 @@ export function FitBlock({ result }: Props) {
       <div className="grid items-center gap-4" style={{ gridTemplateColumns: '64px 1fr' }}>
         <div className="text-center">
           <div className="font-display tabular-nums leading-none" style={{ fontSize: '40px', color: fitColorVal }}>
-            {fitDisplay}
+            {insufficient
+              ? '--'
+              : <NumberFlip value={Math.round(result.fit)} decimals={0} />}
           </div>
           <div className="text-[9px] text-ink-3 tracking-[0.1em] mt-1">/100</div>
         </div>
@@ -81,7 +83,7 @@ export function FitBlock({ result }: Props) {
                   ? <div className="h-1 bg-bg-3" aria-hidden="true" />
                   : <Bar value={c.score} />}
                 <div className="text-[10px] text-ink-1 tabular-nums text-right font-mono">
-                  {insufficient ? '—' : score}
+                  {insufficient ? '—' : <NumberFlip value={score} decimals={0} />}
                 </div>
               </div>
             )

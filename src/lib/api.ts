@@ -1,5 +1,6 @@
 import type { PriceData, PricePoint } from './metrics'
 import type { Pool } from './cases'
+import type { PoolIndexRawPoint } from './poolIndex'
 
 // Worker URL precedence:
 //   1. window.__CS2_CONFIG__.workerUrl  — runtime config from /config.js
@@ -193,15 +194,41 @@ export async function fetchHistory(name: string, days = 30): Promise<PricePoint[
     }))
 }
 
-/** Fetch top movers in a window. */
-export async function fetchMovers(days = 7): Promise<MoverRow[]> {
-  const data = await jsonGet<{ movers: MoverRow[] }>(`/movers?days=${days}`)
-  return data.movers
+export interface MoversResponse {
+  days: number
+  movers: MoverRow[]
+  pool_index?: {
+    DISCONTINUED: PoolIndexRawPoint[]
+    RARE: PoolIndexRawPoint[]
+    ACTIVE: PoolIndexRawPoint[]
+  }
+}
+
+/** Fetch top movers + pool-index series in a window. */
+export async function fetchMovers(days = 7): Promise<MoversResponse> {
+  return jsonGet<MoversResponse>(`/movers?days=${days}`)
 }
 
 /** Fetch aggregate market stats. */
 export async function fetchStats(): Promise<MarketStats> {
   return jsonGet<MarketStats>('/stats')
+}
+
+export interface CronRecentRun {
+  started_at: number
+  finished_at: number | null
+  succeeded: number
+  failed: number
+  error: string | null
+  duration_s: number | null
+}
+
+export interface CronRecentResponse {
+  runs: CronRecentRun[]
+}
+
+export async function fetchCronRecent(n = 24): Promise<CronRecentResponse> {
+  return jsonGet<CronRecentResponse>(`/cron/recent?n=${n}`)
 }
 
 /** Trigger an on-demand refresh of any stale cases. */

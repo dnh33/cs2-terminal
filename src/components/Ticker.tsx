@@ -1,4 +1,5 @@
 import type { Pool } from '../lib/cases'
+import { NumberFlip } from './primitives/NumberFlip'
 
 export interface TickerRow {
   shortName: string
@@ -28,13 +29,16 @@ export function Ticker({ rows }: { rows: TickerRow[] }) {
         {display.map((r, i) => (
           <div key={i} className="flex items-center gap-2 shrink-0">
             <span className="text-ink-2 tracking-[0.05em]">{r.shortName}</span>
-            <span className="t-data-bold text-ink-0">${r.price.toFixed(2)}</span>
+            <span className="t-data-bold text-ink-0">
+              <NumberFlip value={r.price} prefix="$" decimals={2} />
+            </span>
             {r.pctChange != null && (
               <span
                 className="text-[10px]"
                 style={{ color: r.pctChange >= 0 ? 'var(--delta-up)' : 'var(--delta-dn)' }}
               >
-                {r.pctChange >= 0 ? '▲' : '▼'} {Math.abs(r.pctChange).toFixed(1)}%
+                {r.pctChange >= 0 ? '▲' : '▼'}{' '}
+                <NumberFlip value={Math.abs(r.pctChange)} suffix="%" decimals={1} />
               </span>
             )}
             <span className={`text-[9px] tracking-[0.1em] px-1.5 border ${POOL_COLOR[r.pool]}`}>

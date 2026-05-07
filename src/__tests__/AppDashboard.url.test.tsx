@@ -22,7 +22,7 @@ vi.mock('../lib/api', async () => {
     ...actual,
     checkAuth: async () => ({ authenticated: true, auth_required: false }),
     logout: vi.fn(),
-    fetchMovers: async () => [],
+    fetchMovers: async () => ({ days: 7, movers: [] }),
   }
 })
 

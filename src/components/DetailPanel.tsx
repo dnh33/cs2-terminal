@@ -1,5 +1,12 @@
+import { lazy, Suspense, useRef } from 'react'
 import { PoolBadge } from './Atoms'
-import { PriceChart } from './Charts'
+import { Skeleton } from './primitives/Skeleton'
+import { NumberFlip } from './primitives/NumberFlip'
+// T10: lazy-load PriceChart so DetailPanel doesn't pull Charts.tsx into the
+// initial chunk (otherwise App.tsx's lazy() boundaries are no-ops).
+const PriceChart = lazy(() => import('./Charts').then(m => ({ default: m.PriceChart })))
+import { Reticle } from './Reticle'
+import type { LWChartRef } from './primitives/LWChart'
 import { AnalysisOutput } from './AnalysisOutput'
 import { Banner } from './primitives/Banner'
 import { Drawer } from './primitives/Drawer'
@@ -66,13 +73,23 @@ interface Props {
   scanSnapshotAt?: number | null
   /** Current worker snapshot timestamp (seconds) — see scanSnapshotAt. */
   currentSnapshotAt?: number | null
+  /**
+   * P3-Plan-2 T4: Reticle peers — `{id, name, price}` shape (not PeerCandidate).
+   * Derived in App.tsx from items + peers; passed down so DetailPanel stays a
+   * pure presentational consumer. Empty array safely renders the readout
+   * without the COMP block.
+   */
+  reticlePeers?: { id: string; name: string; price: number }[]
 }
 
 export function DetailPanel({
   item, onAnalyze, analysis, analyzing, error,
   fit, peers, onSelectPeer, verdict, confidence, fromScan, onClose, onDevilsAdvocate,
-  divergence, scanSnapshotAt, currentSnapshotAt,
+  divergence, scanSnapshotAt, currentSnapshotAt, reticlePeers,
 }: Props) {
+  // Plan-2 T4: Reticle attaches to PriceChart's forwardRef. Hook is at the top
+  // level (not inside `body`) so it survives the desktop/mobile branch below.
+  const chartRef = useRef<LWChartRef>(null)
   if (!item) {
     return (
       <div className="p-10 text-center text-ink-3 text-[12px] tracking-[0.1em]">
@@ -122,18 +139,24 @@ export function DetailPanel({
         <div className="grid grid-cols-3 border-b border-line">
           <div className="px-5 py-3.5 border-r border-line">
             <div className="text-[9px] tracking-[0.2em] text-ink-2">LOWEST ASK</div>
-            <div className="font-display text-[28px] text-accent-sel leading-tight">${p.lowest.toFixed(2)}</div>
-            <div className="text-[10px] text-ink-2">median ${(p.median || 0).toFixed(2)}</div>
+            <div className="font-display text-[28px] text-accent-sel leading-tight">
+              <NumberFlip value={p.lowest} prefix="$" decimals={2} />
+            </div>
+            <div className="text-[10px] text-ink-2">
+              median <NumberFlip value={p.median || 0} prefix="$" decimals={2} />
+            </div>
           </div>
           <div className="px-5 py-3.5 border-r border-line">
             <div className="text-[9px] tracking-[0.2em] text-ink-2">24H VOLUME</div>
-            <div className="font-display text-[28px] text-accent-data leading-tight">{p.volume.toLocaleString()}</div>
+            <div className="font-display text-[28px] text-accent-data leading-tight">
+              <NumberFlip value={p.volume} formatter={(n) => n.toLocaleString('en-US')} />
+            </div>
             <div className="text-[10px] text-ink-2">units sold</div>
           </div>
           <div className="px-5 py-3.5">
             <div className="text-[9px] tracking-[0.2em] text-ink-2">BREAK-EVEN</div>
             <div className="font-display text-[28px] text-ink-0 leading-tight">
-              ${(m?.breakeven || 0).toFixed(2)}
+              <NumberFlip value={m?.breakeven || 0} prefix="$" decimals={2} />
             </div>
             <div className="text-[10px] text-ink-2">after 15% fee</div>
           </div>
@@ -162,7 +185,12 @@ export function DetailPanel({
             {item.history.some((h) => h.source === 'real') ? 'real history from worker' : 'modeled from current px'}
           </span>
         </div>
-        <PriceChart item={item} />
+        <div className="relative">
+          <Suspense fallback={<Skeleton width="100%" height={240} />}>
+            <PriceChart item={item} ref={chartRef} />
+          </Suspense>
+          <Reticle item={item} chartRef={chartRef} peers={reticlePeers ?? []} />
+        </div>
       </div>
 
       {/* ROI calc (T24) */}
@@ -220,7 +248,13 @@ export function DetailPanel({
           </div>
         </div>
         {error && <Banner variant="error" className="mb-3">Analysis failed. {error}</Banner>}
-        {analysis && <AnalysisOutput text={analysis} />}
+        {analysis && (
+          <AnalysisOutput
+            text={analysis}
+            caseId={item?.id}
+            snapshotAt={currentSnapshotAt ?? undefined}
+          />
+        )}
         {!analysis && !analyzing && !error && (
           <div className="text-[11px] text-ink-3 p-5 border border-dashed border-line-bright text-center tracking-[0.1em]">
             Run analysis to get a Claude-generated investment thesis using current market data.

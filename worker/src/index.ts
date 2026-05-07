@@ -30,6 +30,12 @@
 
 import { OpenRouter } from '@openrouter/sdk'
 import { uniqueHighTierItems, uniqueLowTierItems, itemToCases } from './data/dropTable'
+import {
+  computePoolIndexSeries,
+  type PoolIndexSeries,
+  type SnapshotRow as PoolIndexRow,
+} from './handlers/movers'
+import { handleCronRecent } from './handlers/cronRecent'
 
 export interface Env {
   DB: D1Database
@@ -132,6 +138,25 @@ const SENTINEL_INSTRUCTION = `\n\n=== STRUCTURED VERDICT REQUIREMENT ===\n` +
 const STALE_THRESHOLD_SECONDS = 600              // refresh on-demand if >10min old
 const STEAM_RATE_LIMIT_BACKOFF_MS = 60_000        // wait on 429
 const FETCH_TIMEOUT_MS = 12_000
+
+// ─── In-memory TTL cache (used by /movers pool_index) ───────────────────────
+// Segregated from /movers body cache (audit H2): the pool_index series is
+// recomputed independently and keyed by `${days}` only.
+class TtlCache<K, V> {
+  private map = new Map<K, { v: V; expires: number }>()
+  get(key: K): V | undefined {
+    const e = this.map.get(key)
+    if (!e || e.expires < Date.now()) {
+      this.map.delete(key)
+      return undefined
+    }
+    return e.v
+  }
+  set(key: K, value: V, ttlMs: number) {
+    this.map.set(key, { v: value, expires: Date.now() + ttlMs })
+  }
+}
+const poolIndexCache = new TtlCache<string, PoolIndexSeries>()
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -1212,7 +1237,32 @@ export default {
       if (url.pathname === '/movers' && request.method === 'GET') {
         const days = Math.min(90, parseInt(url.searchParams.get('days') || '7', 10) || 7)
         const rows = await getMovers(env, days)
-        return jsonResponse({ days, movers: rows }, env)
+
+        // Pool Index VWAP series (DISC/RARE/ACTIVE per snapshot in window).
+        // Cache key segregated from /movers body cache (audit H2). 60s TTL.
+        const cacheKey = `pool_index:${days}`
+        let poolIndex = poolIndexCache.get(cacheKey)
+        if (!poolIndex) {
+          const sinceUnix = Math.floor(Date.now() / 1000) - days * 86400
+          const indexRows = await env.DB.prepare(
+            `SELECT p.case_id, c.pool, p.fetched_at, p.lowest, p.volume
+             FROM price_snapshots p
+             JOIN cases c ON c.id = p.case_id
+             WHERE p.fetched_at >= ?
+             ORDER BY p.fetched_at ASC`,
+          ).bind(sinceUnix).all<PoolIndexRow>()
+          poolIndex = computePoolIndexSeries(indexRows.results ?? [])
+          poolIndexCache.set(cacheKey, poolIndex, 60_000)
+        }
+
+        return jsonResponse({ days, movers: rows, pool_index: poolIndex }, env)
+      }
+
+      // Cron recent — last N case-tier cron runs for SystemStatus sparkline.
+      // Bearer-gated alongside /latest per spec § 2.1.G.
+      if (url.pathname === '/cron/recent' && request.method === 'GET') {
+        const data = await handleCronRecent(url, env)
+        return jsonResponse(data, env)
       }
 
       // /api/items/medians?caseId=glove-case
@@ -1524,34 +1574,3 @@ async function runItemSweep(
   }
 }
 
-async function runSweepWithLog(env: Env, source: 'cron' | 'admin'): Promise<void> {
-  const startedAt = Math.floor(Date.now() / 1000)
-  console.log(`[${source}] sweep starting at ${new Date().toISOString()}`)
-
-  let succeeded = 0
-  let failed = 0
-  let error: string | null = null
-
-  try {
-    const result = await sweep(env)
-    succeeded = result.succeeded
-    failed = result.failed
-    if (result.rateLimited) error = 'rate-limited (recovered)'
-  } catch (e: any) {
-    error = e.message || 'unknown error'
-    console.error(`[${source}] sweep failed:`, e)
-  }
-
-  const finishedAt = Math.floor(Date.now() / 1000)
-  console.log(`[${source}] sweep done: ${succeeded} ok, ${failed} failed, ${finishedAt - startedAt}s`)
-
-  // Log to cron_runs table for observability
-  try {
-    await env.DB
-      .prepare(`INSERT INTO cron_runs (started_at, finished_at, succeeded, failed, error) VALUES (?, ?, ?, ?, ?)`)
-      .bind(startedAt, finishedAt, succeeded, failed, error)
-      .run()
-  } catch (e: any) {
-    console.error('[log] failed to record cron run:', e)
-  }
-}
