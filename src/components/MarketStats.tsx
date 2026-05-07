@@ -3,6 +3,7 @@ import { CASE_DB } from '../lib/cases'
 import type { CaseRecord } from '../lib/cases'
 import type { PriceData } from '../lib/metrics'
 import { Skeleton } from './primitives/Skeleton'
+import { NumberFlip } from './primitives/NumberFlip'
 
 export interface ItemWithPrice extends CaseRecord {
   price: PriceData | null
@@ -64,11 +65,34 @@ export function MarketStats({ items }: { items: ItemWithPrice[] }) {
   }
   return (
     <div className="border-b border-line bg-bg-1 flex flex-wrap">
-      <StatBlock label="CASES TRACKED" value={stats.tracked} sub={`of ${CASE_DB.length} in DB`} />
-      <StatBlock label="24H VOLUME" value={stats.totalVol.toLocaleString()} sub="units sold" accent="#4fd1c5" />
-      <StatBlock label="DAILY MARKET CAP" value={`$${(stats.totalCap / 1000).toFixed(1)}K`} sub="approx, lowest×vol" />
-      <StatBlock label="DISC / ACTIVE" value={`${stats.ratio.toFixed(1)}×`} sub={`$${stats.avgD.toFixed(2)} vs $${stats.avgA.toFixed(2)}`} accent="#ff7421" />
-      <StatBlock label="HIGHEST PRICE" value={`$${stats.max.toFixed(2)}`} sub={stats.maxName} accent="#fbbf24" />
+      <StatBlock
+        label="CASES TRACKED"
+        value={<NumberFlip value={stats.tracked} decimals={0} flashOnChange={false} />}
+        sub={`of ${CASE_DB.length} in DB`}
+      />
+      <StatBlock
+        label="24H VOLUME"
+        value={<NumberFlip value={stats.totalVol} formatter={(n) => n.toLocaleString('en-US')} />}
+        sub="units sold"
+        accent="#4fd1c5"
+      />
+      <StatBlock
+        label="DAILY MARKET CAP"
+        value={<NumberFlip value={stats.totalCap} formatter={(n) => `$${(n / 1000).toFixed(1)}K`} />}
+        sub="approx, lowest×vol"
+      />
+      <StatBlock
+        label="DISC / ACTIVE"
+        value={<NumberFlip value={stats.ratio} suffix="×" decimals={1} />}
+        sub={`$${stats.avgD.toFixed(2)} vs $${stats.avgA.toFixed(2)}`}
+        accent="#ff7421"
+      />
+      <StatBlock
+        label="HIGHEST PRICE"
+        value={<NumberFlip value={stats.max} prefix="$" decimals={2} />}
+        sub={stats.maxName}
+        accent="#fbbf24"
+      />
     </div>
   )
 }
