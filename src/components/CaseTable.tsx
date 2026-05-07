@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CaseRecord, Pool } from '../lib/cases'
 import type { PriceData, Metrics, PricePoint } from '../lib/metrics'
 import { PoolBadge, MiniSparkline } from './Atoms'
 import { KbdRow, KbdSortHeader } from './primitives/KeyboardTable'
 import { Skeleton } from './primitives/Skeleton'
 import { usePrevious } from '../lib/usePrevious'
+import { useCatalystJournal } from '../lib/useCatalystJournal'
+import { todayLocal, formatShortDate } from '../lib/dates'
+
+interface CatalystChipInfo { count: number; next: string }
 
 export interface ItemFull extends CaseRecord {
   price: PriceData | null
@@ -21,9 +25,10 @@ interface RowProps {
   idx: number
   selected: boolean
   onClick: () => void
+  catalyst?: CatalystChipInfo
 }
 
-function CaseRow({ item, idx, selected, onClick }: RowProps) {
+function CaseRow({ item, idx, selected, onClick, catalyst }: RowProps) {
   const m = item.metrics, p = item.price
   const bg = selected ? 'rgba(232,104,26,0.08)' : 'transparent'
 
@@ -58,7 +63,7 @@ function CaseRow({ item, idx, selected, onClick }: RowProps) {
     <KbdRow
       onActivate={onClick}
       selected={selected}
-      aria-label={`${item.name}, ${item.pool}, ${p ? `lowest $${p.lowest.toFixed(2)}` : 'no price'}`}
+      aria-label={`${item.name}, ${item.pool}, ${p ? `lowest $${p.lowest.toFixed(2)}` : 'no price'}${catalyst ? `, ${catalyst.count} upcoming catalyst${catalyst.count === 1 ? '' : 's'}, next ${formatShortDate(catalyst.next)}` : ''}`}
       className="border-b border-line cursor-pointer transition-colors hover:bg-white/[0.02]"
       style={{
         background: bg,
@@ -74,6 +79,11 @@ function CaseRow({ item, idx, selected, onClick }: RowProps) {
           </div>
           <div className="text-[10px] text-ink-2 mt-0.5">
             {item.released} · {item.rare}{item.hasGloves ? ' · GLV' : ''}
+            {catalyst && (
+              <span className="ml-1 text-accent-data">
+                {' • '}<span aria-hidden="true">●</span> {catalyst.count} {catalyst.count === 1 ? 'catalyst' : 'catalysts'} · {formatShortDate(catalyst.next)}
+              </span>
+            )}
           </div>
         </div>
         <div className="text-right shrink-0">
@@ -96,6 +106,11 @@ function CaseRow({ item, idx, selected, onClick }: RowProps) {
           <div className="text-ink-0 font-medium">{item.name}</div>
           <div className="text-[10px] text-ink-2 mt-0.5">
             {item.released} · {item.rare}{item.hasGloves ? ' · GLV' : ''}
+            {catalyst && (
+              <span className="ml-1 text-accent-data">
+                {' • '}<span aria-hidden="true">●</span> {catalyst.count} {catalyst.count === 1 ? 'catalyst' : 'catalysts'} · {formatShortDate(catalyst.next)}
+              </span>
+            )}
           </div>
         </div>
         <PoolBadge pool={item.pool} />
@@ -135,6 +150,19 @@ interface TableProps {
 }
 
 export function CaseTable({ items, selectedId, onSelect, sort, setSort, filter, setFilter, loading }: TableProps) {
+  const { entries: catalystEntries } = useCatalystJournal()
+  const today = todayLocal()
+  const upcomingByCase = useMemo(() => {
+    const map = new Map<string, CatalystChipInfo>()
+    for (const e of catalystEntries) {
+      if (e.eventDate < today) continue
+      const cur = map.get(e.caseId)
+      if (!cur) map.set(e.caseId, { count: 1, next: e.eventDate })
+      else map.set(e.caseId, { count: cur.count + 1, next: e.eventDate < cur.next ? e.eventDate : cur.next })
+    }
+    return map
+  }, [catalystEntries, today])
+
   const headers: { k: SortKey | 'idx' | 'spark'; l: string }[] = [
     { k: 'idx', l: '#' },
     { k: 'name', l: 'CASE' },
@@ -230,6 +258,7 @@ export function CaseTable({ items, selectedId, onSelect, sort, setSort, filter, 
                 idx={i + 1}
                 selected={item.id === selectedId}
                 onClick={() => onSelect(item.id)}
+                catalyst={upcomingByCase.get(item.id)}
               />
             ))}
       </div>
