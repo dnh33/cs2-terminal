@@ -100,7 +100,7 @@ describe('DetailPanel — Decision Log', () => {
 
   it('Decision Log COMMIT button is enabled when verdict is provided', () => {
     const { desktop } = renderWithVerdict()
-    expect(within(desktop).getByRole('button', { name: /commit/i })).toBeEnabled()
+    expect(within(desktop).getByRole('button', { name: /^✓ commit$/i })).toBeEnabled()
   })
 })
 
@@ -209,7 +209,7 @@ describe('DetailPanel — divergence chips (P2-#6)', () => {
     const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
     expect(within(desktop).getByText(/WE DON'T KNOW/)).toBeInTheDocument()
     // COMMIT button should be disabled even though verdict + confidence are present
-    expect(within(desktop).getByRole('button', { name: /commit/i })).toBeDisabled()
+    expect(within(desktop).getByRole('button', { name: /^✓ commit$/i })).toBeDisabled()
   })
 
   it('renders no chip when divergence.status === "ok" or null', () => {
@@ -295,7 +295,7 @@ describe('DetailPanel — verdict badge wiring', () => {
       />,
     )
     const desktop = container.querySelector('[data-test="detail-desktop"]') as HTMLElement
-    const commitBtn = within(desktop).getByRole('button', { name: /commit/i })
+    const commitBtn = within(desktop).getByRole('button', { name: /^✓ commit$/i })
     expect(commitBtn).toBeEnabled()
   })
 })
