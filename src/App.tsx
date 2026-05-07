@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
+import { flushSync } from 'react-dom'
 import { useMarketData } from './hooks/useMarketData'
+import { useHypothesisLedger } from './lib/useHypothesisLedger'
 import { Header } from './components/Header'
 import { Ticker } from './components/Ticker'
 import { MarketStats } from './components/MarketStats'
@@ -22,7 +24,7 @@ import { Banner } from './components/primitives/Banner'
 import { FrameGutter } from './components/primitives/FrameGutter'
 import { CmdK, type CmdKItem } from './components/CmdK'
 import { useGlobalKeystroke } from './lib/useGlobalKeystroke'
-import { POOL_RANK } from './lib/cases'
+import { POOL_RANK, CASE_DB } from './lib/cases'
 import {
   callClaudeStream,
   ANALYST_SYSTEM,
@@ -42,6 +44,7 @@ import { useSelectedCase } from './lib/useSelectedCase'
 import { C } from './lib/theme'
 import { computeFit, type FitResult } from './lib/fitScore'
 import { fetchItemMedians, type ItemMediansResponse } from './lib/itemMedians'
+import { runResolverPass } from './lib/hypothesisResolverPass'
 
 // Worker URL precedence mirrors src/lib/api.ts so telemetry POST hits the
 // same origin as the rest of the API.
@@ -80,7 +83,20 @@ type AuthState =
  * accordingly. Listens for AuthRequiredError thrown deep in the API client
  * (e.g. token expired mid-session) and bumps the user back to the login screen.
  */
+// Spec preview route bypasses auth — public showcase of design specs.
+// See src/spec/ for showcases. Pathname check happens before any auth probe.
+const SpecRoute = lazy(() => import('./spec/HypothesisLedgerShowcase'))
+
 export default function AppGate() {
+  // Public spec-preview route — no auth, no worker calls
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/spec/hypothesis-ledger')) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-bg-0" aria-busy />}>
+        <SpecRoute />
+      </Suspense>
+    )
+  }
+
   const [auth, setAuth] = useState<AuthState>({ status: 'loading' })
 
   async function probe() {
@@ -193,6 +209,19 @@ function formatDeltaTable(m7: MoverLite[], m30: MoverLite[], m90: MoverLite[]): 
 
 function AppDashboard({ onLogout }: DashboardProps) {
   const { items, fetching, lastUpdated, fetchError, stats, fetchAll, loadDemo, loadRealHistory } = useMarketData()
+  const { entries: hypotheses } = useHypothesisLedger()
+
+  // Phase 4 Plan 1: Hypothesis Ledger resolver pass — runs once on mount + on
+  // visibilitychange→visible. Mounted INSIDE AppDashboard so auth is guaranteed
+  // (resolver makes /history calls; outside the auth gate they'd 401-spam).
+  useEffect(() => {
+    runResolverPass()
+    function onVis() {
+      if (document.visibilityState === 'visible') runResolverPass()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [])
 
   const [urlSelectedId, setSelectedIdRaw] = useSelectedCase()
   // P3-T36: track whether the most recent selection came from a CaseChip in
@@ -704,10 +733,35 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
     const toggleItems: CmdKItem[] = [
       { id: 'toggle:palette', section: 'toggle', label: 'Cycle Palette Mode (STD/AMBER/GREEN)' },
     ]
-    return [...caseItems, ...panelItems, ...actionItems, ...toggleItems]
-  }, [items, selectedId])
+    const hypothesisItems: CmdKItem[] = hypotheses
+      .filter(h => h.resolution === null)
+      .sort((a, b) => a.targetDate.localeCompare(b.targetDate))
+      .map(h => ({
+        id: `hyp:${h.id}`,
+        section: 'hypothesis' as const,
+        label: `${(CASE_DB.find(c => c.id === h.caseId)?.name ?? h.caseName).toUpperCase()} ${h.comparator === 'gte' ? '≥' : '≤'} $${h.targetPrice.toFixed(2)} by ${h.targetDate}`,
+        meta: `PENDING · ${h.confidence}%`,
+      }))
+    return [...caseItems, ...panelItems, ...actionItems, ...toggleItems, ...hypothesisItems]
+  }, [items, selectedId, hypotheses])
 
   function handleCmdKActivate(item: CmdKItem) {
+    if (item.id.startsWith('hyp:')) {
+      const hypId = item.id.slice('hyp:'.length)
+      const h = hypotheses.find(x => x.id === hypId)
+      if (h) {
+        // flushSync forces DetailPanel to commit synchronously for the new
+        // selectedId BEFORE the rAF callback runs the scrollIntoView. Avoids
+        // the setTimeout(N) race where the target node may not exist yet.
+        flushSync(() => { setSelectedId(h.caseId) })
+        requestAnimationFrame(() => {
+          document.querySelector('[data-test="hypothesis-ledger-section"]')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        })
+      }
+      setCmdkOpen(false)
+      return
+    }
     setCmdkOpen(false)
     if (item.id.startsWith('case:')) {
       setSelectedId(item.id.slice('case:'.length))
