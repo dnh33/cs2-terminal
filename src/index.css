@@ -288,3 +288,17 @@
   .num-flip[data-flash="up"]   { animation-duration: 1ms !important; background: rgb(var(--delta-up-rgb) / 0.08); }
   .num-flip[data-flash="down"] { animation-duration: 1ms !important; background: rgb(var(--delta-dn-rgb) / 0.08); }
 }
+
+@keyframes sigil-arms-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.sigil-arms-syncing {
+  animation: sigil-arms-rotate 4s linear infinite;
+  /* P1-4 audit fix: SVG <g> transform-origin: center is bbox-based — pin to explicit
+     pixel coords matching the StatusSigil viewBox center (28×28 → 14,14). */
+  transform-origin: 14px 14px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sigil-arms-syncing { animation: none; }
+}
