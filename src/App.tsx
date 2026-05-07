@@ -358,6 +358,24 @@ function AppDashboard({ onLogout }: DashboardProps) {
     })
   }, [items, fitResults])
 
+  // Plan-2 T4: Reticle expects `{id,name,price}` peers, not PeerCandidate.
+  // Derive at the App boundary so DetailPanel stays presentational. Picks the
+  // 3 priced peers nearest to the selected case by FitResult distance, when
+  // a fit is available; otherwise empty (Reticle hides the COMP block).
+  const reticlePeers = useMemo(() => {
+    if (!fit || fit.status !== 'ok' || !selected) return []
+    return peerCandidates
+      .filter(c => c.id !== selected.id && c.result.status === 'ok')
+      .slice(0, 3)
+      .flatMap(c => {
+        const peerItem = items.find(i => i.id === c.id)
+        const price = peerItem?.price?.lowest
+        return typeof price === 'number'
+          ? [{ id: c.id, name: c.name, price }]
+          : []
+      })
+  }, [peerCandidates, fit, selected, items])
+
   // Telemetry — fire-and-forget POST to /api/telemetry/fit on every fresh
   // FIT computation for the selected case. Keyed on inputs_hash so we don't
   // re-send when the user re-selects the same case with the same snapshot.
@@ -847,6 +865,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
                 divergence={divergence}
                 scanSnapshotAt={lastScanSnapshotAt}
                 currentSnapshotAt={stats?.last_snapshot_at ?? null}
+                reticlePeers={reticlePeers}
               />
             </div>
           </div>

@@ -1,9 +1,11 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useRef } from 'react'
 import { PoolBadge } from './Atoms'
 import { Skeleton } from './primitives/Skeleton'
 // T10: lazy-load PriceChart so DetailPanel doesn't pull Charts.tsx into the
 // initial chunk (otherwise App.tsx's lazy() boundaries are no-ops).
 const PriceChart = lazy(() => import('./Charts').then(m => ({ default: m.PriceChart })))
+import { Reticle } from './Reticle'
+import type { LWChartRef } from './primitives/LWChart'
 import { AnalysisOutput } from './AnalysisOutput'
 import { Banner } from './primitives/Banner'
 import { Drawer } from './primitives/Drawer'
@@ -70,13 +72,23 @@ interface Props {
   scanSnapshotAt?: number | null
   /** Current worker snapshot timestamp (seconds) — see scanSnapshotAt. */
   currentSnapshotAt?: number | null
+  /**
+   * P3-Plan-2 T4: Reticle peers — `{id, name, price}` shape (not PeerCandidate).
+   * Derived in App.tsx from items + peers; passed down so DetailPanel stays a
+   * pure presentational consumer. Empty array safely renders the readout
+   * without the COMP block.
+   */
+  reticlePeers?: { id: string; name: string; price: number }[]
 }
 
 export function DetailPanel({
   item, onAnalyze, analysis, analyzing, error,
   fit, peers, onSelectPeer, verdict, confidence, fromScan, onClose, onDevilsAdvocate,
-  divergence, scanSnapshotAt, currentSnapshotAt,
+  divergence, scanSnapshotAt, currentSnapshotAt, reticlePeers,
 }: Props) {
+  // Plan-2 T4: Reticle attaches to PriceChart's forwardRef. Hook is at the top
+  // level (not inside `body`) so it survives the desktop/mobile branch below.
+  const chartRef = useRef<LWChartRef>(null)
   if (!item) {
     return (
       <div className="p-10 text-center text-ink-3 text-[12px] tracking-[0.1em]">
@@ -166,9 +178,12 @@ export function DetailPanel({
             {item.history.some((h) => h.source === 'real') ? 'real history from worker' : 'modeled from current px'}
           </span>
         </div>
-        <Suspense fallback={<Skeleton width="100%" height={240} />}>
-          <PriceChart item={item} />
-        </Suspense>
+        <div className="relative">
+          <Suspense fallback={<Skeleton width="100%" height={240} />}>
+            <PriceChart item={item} ref={chartRef} />
+          </Suspense>
+          <Reticle item={item} chartRef={chartRef} peers={reticlePeers ?? []} />
+        </div>
       </div>
 
       {/* ROI calc (T24) */}
