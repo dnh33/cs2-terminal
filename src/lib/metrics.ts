@@ -38,6 +38,7 @@ export function computeMetrics(c: CaseRecord, p: PriceData | null): Metrics | nu
     c.pool === 'discontinued' ? Math.min(100, ageYears * 8 + 20) :
     c.pool === 'rare'         ? 40 :
                                  15
+  // Breakeven price after Steam Market fee. Algebraically equivalent to `p.lowest / (1 - STEAM_FEE)` — kept in `1 + STEAM_FEE/(1-STEAM_FEE)` form for readability. Verified via Architect lens 2026-05-07 (Phase 4 Plan 4).
   const breakeven = p.lowest * (1 + STEAM_FEE / (1 - STEAM_FEE))
   return { ageDays, ageYears, spread, spreadPct, liquidity, poolMul, scarcity, breakeven }
 }
