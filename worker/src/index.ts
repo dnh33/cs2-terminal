@@ -1574,34 +1574,3 @@ async function runItemSweep(
   }
 }
 
-async function runSweepWithLog(env: Env, source: 'cron' | 'admin'): Promise<void> {
-  const startedAt = Math.floor(Date.now() / 1000)
-  console.log(`[${source}] sweep starting at ${new Date().toISOString()}`)
-
-  let succeeded = 0
-  let failed = 0
-  let error: string | null = null
-
-  try {
-    const result = await sweep(env)
-    succeeded = result.succeeded
-    failed = result.failed
-    if (result.rateLimited) error = 'rate-limited (recovered)'
-  } catch (e: any) {
-    error = e.message || 'unknown error'
-    console.error(`[${source}] sweep failed:`, e)
-  }
-
-  const finishedAt = Math.floor(Date.now() / 1000)
-  console.log(`[${source}] sweep done: ${succeeded} ok, ${failed} failed, ${finishedAt - startedAt}s`)
-
-  // Log to cron_runs table for observability
-  try {
-    await env.DB
-      .prepare(`INSERT INTO cron_runs (started_at, finished_at, succeeded, failed, error) VALUES (?, ?, ?, ?, ?)`)
-      .bind(startedAt, finishedAt, succeeded, failed, error)
-      .run()
-  } catch (e: any) {
-    console.error('[log] failed to record cron run:', e)
-  }
-}
