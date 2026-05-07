@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 import { flushSync } from 'react-dom'
 import { useMarketData } from './hooks/useMarketData'
 import { useHypothesisLedger } from './lib/useHypothesisLedger'
+import { useCatalystJournal } from './lib/useCatalystJournal'
+import { todayLocal, formatShortDate } from './lib/dates'
+import { filterByItemMap } from './lib/filterByItemMap'
 import { Header } from './components/Header'
 import { Ticker } from './components/Ticker'
 import { MarketStats } from './components/MarketStats'
@@ -210,6 +213,7 @@ function formatDeltaTable(m7: MoverLite[], m30: MoverLite[], m90: MoverLite[]): 
 function AppDashboard({ onLogout }: DashboardProps) {
   const { items, fetching, lastUpdated, fetchError, stats, fetchAll, loadDemo, loadRealHistory } = useMarketData()
   const { entries: hypotheses } = useHypothesisLedger()
+  const { entries: catalystEntries } = useCatalystJournal()
 
   // Phase 4 Plan 1: Hypothesis Ledger resolver pass — runs once on mount + on
   // visibilitychange→visible. Mounted INSIDE AppDashboard so auth is guaranteed
@@ -742,8 +746,27 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
         label: `${(CASE_DB.find(c => c.id === h.caseId)?.name ?? h.caseName).toUpperCase()} ${h.comparator === 'gte' ? '≥' : '≤'} $${h.targetPrice.toFixed(2)} by ${h.targetDate}`,
         meta: `PENDING · ${h.confidence}%`,
       }))
-    return [...caseItems, ...panelItems, ...actionItems, ...toggleItems, ...hypothesisItems]
-  }, [items, selectedId, hypotheses])
+    const today = todayLocal()
+    const upcomingCatalysts = filterByItemMap(
+      catalystEntries.filter(e => e.eventDate >= today),
+      items,
+    )
+    const catalystItems: CmdKItem[] = upcomingCatalysts
+      .slice()
+      .sort((a, b) => a.eventDate.localeCompare(b.eventDate) || b.createdAt - a.createdAt)
+      .map(c => {
+        const caseName = (items.find(i => i.id === c.caseId)?.name ?? c.caseId).toUpperCase()
+        return {
+          id: `catalyst:${c.id}`,
+          section: 'catalyst' as const,
+          // Bake searchable text into label (no `keywords` mechanism — fuzzyMatch
+          // operates on label only). Format: CASE  LABEL.
+          label: `${caseName}  ${c.label}`,
+          meta: formatShortDate(c.eventDate),
+        }
+      })
+    return [...caseItems, ...panelItems, ...actionItems, ...toggleItems, ...hypothesisItems, ...catalystItems]
+  }, [items, selectedId, hypotheses, catalystEntries])
 
   function handleCmdKActivate(item: CmdKItem) {
     if (item.id.startsWith('hyp:')) {
@@ -756,6 +779,19 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
         flushSync(() => { setSelectedId(h.caseId) })
         requestAnimationFrame(() => {
           document.querySelector('[data-test="hypothesis-ledger-section"]')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        })
+      }
+      setCmdkOpen(false)
+      return
+    }
+    if (item.id.startsWith('catalyst:')) {
+      const catId = item.id.slice('catalyst:'.length)
+      const c = catalystEntries.find(x => x.id === catId)
+      if (c) {
+        flushSync(() => { setSelectedId(c.caseId) })
+        requestAnimationFrame(() => {
+          document.querySelector('[data-test="catalyst-journal-section"]')
             ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         })
       }
