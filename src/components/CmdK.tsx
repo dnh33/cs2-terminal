@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-export type CmdKSection = 'cases' | 'panels' | 'action' | 'toggle'
+export type CmdKSection = 'cases' | 'panels' | 'action' | 'toggle' | 'hypothesis'
 
 export interface CmdKItem {
   id: string
@@ -29,9 +29,10 @@ const SECTION_LABELS: Record<CmdKSection, string> = {
   panels: 'PANELS',
   action: 'ACTION',
   toggle: 'TOGGLE',
+  hypothesis: 'HYPOTHESES',
 }
 
-const SECTION_ORDER: CmdKSection[] = ['cases', 'panels', 'action', 'toggle']
+const SECTION_ORDER: CmdKSection[] = ['cases', 'panels', 'action', 'toggle', 'hypothesis']
 
 // Module-level component (not nested) — vercel-react-best-practices
 // rerender-no-inline-components.
