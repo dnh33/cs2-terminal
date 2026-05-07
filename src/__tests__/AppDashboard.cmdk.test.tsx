@@ -28,7 +28,12 @@ vi.mock('../lib/api', async () => {
 })
 
 describe('AppDashboard ⌘K palette wiring', () => {
-  beforeEach(() => { window.history.replaceState({}, '', '/'); localStorage.clear() })
+  beforeEach(() => {
+    vi.resetModules()
+    vi.unstubAllGlobals()
+    window.history.replaceState({}, '', '/')
+    localStorage.clear()
+  })
 
   it('opens CmdK on ⌘K keystroke', async () => {
     const Mod = await import('../App')

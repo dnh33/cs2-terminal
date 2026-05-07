@@ -754,8 +754,12 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
     const toggleItems: CmdKItem[] = [
       { id: 'toggle:palette', section: 'toggle', label: 'Cycle Palette Mode (STD/AMBER/GREEN)' },
     ]
-    const hypothesisItems: CmdKItem[] = hypotheses
-      .filter(h => h.resolution === null)
+    const validHypotheses = filterByItemMap(
+      hypotheses.filter(h => h.resolution === null),
+      items,
+    )
+    const hypothesisItems: CmdKItem[] = validHypotheses
+      .slice()
       .sort((a, b) => a.targetDate.localeCompare(b.targetDate))
       .map(h => ({
         id: `hyp:${h.id}`,

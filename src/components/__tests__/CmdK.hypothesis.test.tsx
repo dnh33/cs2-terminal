@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { CmdK, type CmdKItem } from '../CmdK'
+import { filterByItemMap } from '../../lib/filterByItemMap'
 
 const baseHypothesis: CmdKItem = {
   id: 'hyp:1',
@@ -27,6 +28,27 @@ describe('CmdK · HYPOTHESES section', () => {
     render(<CmdK open onClose={() => {}} items={[baseHypothesis]} onActivate={onActivate} />)
     fireEvent.click(screen.getByText(/GLOVE/))
     expect(onActivate).toHaveBeenCalledWith(expect.objectContaining({ id: 'hyp:1' }))
+  })
+
+  it('filters out orphan-caseId hypotheses (no matching item) via filterByItemMap', () => {
+    // Plan 5 T5.4: hypothesisItems pre-filtered through filterByItemMap.
+    // A hypothesis whose caseId is NOT in items[] is dropped before mapping to CmdKItem.
+    const hypotheses = [
+      { id: 'h1', caseId: 'glove-case', resolution: null, targetDate: '2026-06-15' },
+      { id: 'h2', caseId: 'orphan-case', resolution: null, targetDate: '2026-07-01' },
+    ]
+    const items = [{ id: 'glove-case' }]
+    const filtered = filterByItemMap(hypotheses, items)
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0].id).toBe('h1')
+  })
+
+  it('filterByItemMap loading-state fallback returns hypotheses unchanged when items=[]', () => {
+    const hypotheses = [
+      { id: 'h1', caseId: 'glove-case', resolution: null, targetDate: '2026-06-15' },
+    ]
+    const filtered = filterByItemMap(hypotheses, [])
+    expect(filtered).toHaveLength(1)
   })
 
   it('hypothesis items appear in section ordering after cases/panels/action/toggle', () => {

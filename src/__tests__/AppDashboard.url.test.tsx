@@ -29,6 +29,8 @@ vi.mock('../lib/api', async () => {
 
 describe('AppDashboard URL state', () => {
   beforeEach(() => {
+    vi.resetModules()
+    vi.unstubAllGlobals()
     window.history.replaceState({}, '', '/')
     localStorage.clear()
   })
