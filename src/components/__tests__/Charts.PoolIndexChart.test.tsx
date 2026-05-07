@@ -29,7 +29,7 @@ vi.mock('lightweight-charts', () => ({
   }),
 }))
 
-import { PoolIndexChart } from '../Charts'
+import { PoolIndexChart } from '../charts/PoolIndexChart'
 
 describe('PoolIndexChart', () => {
   it('adds 3 line series for DISC/RARE/ACTIVE', () => {

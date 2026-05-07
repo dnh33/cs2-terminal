@@ -33,7 +33,7 @@ vi.mock('lightweight-charts', () => ({
   },
 }))
 
-import { PriceChart } from '../Charts'
+import { PriceChart } from '../charts/PriceChart'
 import type { ItemFull } from '../CaseTable'
 
 const makeItem = (overrides: Partial<ItemFull> = {}): ItemFull => ({
