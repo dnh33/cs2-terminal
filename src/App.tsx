@@ -19,6 +19,7 @@ import { LoginScreen } from './components/LoginScreen'
 import { SkipLink } from './components/primitives/SkipLink'
 import { ErrorBoundary } from './components/primitives/ErrorBoundary'
 import { Banner } from './components/primitives/Banner'
+import { FrameGutter } from './components/primitives/FrameGutter'
 import { CmdK, type CmdKItem } from './components/CmdK'
 import { useGlobalKeystroke } from './lib/useGlobalKeystroke'
 import { POOL_RANK } from './lib/cases'
@@ -809,102 +810,131 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
 
       {hasPrice && (
         <div className="px-6 py-5">
-          <div data-test="market-scan-panel">
-            <MarketScanPanel
-              items={items}
-              onScan={runScan}
-              scan={scan}
-              scanning={scanning}
-              error={scanError}
-              onSelectCase={(id) => setSelectedId(id, 'scan')}
-            />
+          {/* 01·MKT — MarketScan + Movers (Phase 3 P4-T6) */}
+          <div className="flex">
+            <FrameGutter number="01" label="MKT" />
+            <div className="flex-1 min-w-0">
+              <div data-test="market-scan-panel">
+                <MarketScanPanel
+                  items={items}
+                  onScan={runScan}
+                  scan={scan}
+                  scanning={scanning}
+                  error={scanError}
+                  onSelectCase={(id) => setSelectedId(id, 'scan')}
+                />
+              </div>
+
+              <div className="mb-4" data-test="movers-panel">
+                <MoversPanel onSelect={setSelectedId} earliestSnapshotAge={earliestSnapshotAge} />
+              </div>
+            </div>
           </div>
 
-          <div className="mb-4" data-test="movers-panel">
-            <MoversPanel onSelect={setSelectedId} earliestSnapshotAge={earliestSnapshotAge} />
+          {/* 03·CHRT — Pool Index + Volume/Price scatter (Phase 3 P4-T6) */}
+          <div className="flex">
+            <FrameGutter number="03" label="CHRT" />
+            <div data-test="chart-row" className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <Suspense fallback={<Skeleton width="100%" height={240} />}>
+                <PoolIndexChart
+                  poolIndex={moversResponse?.pool_index ?? { DISCONTINUED: [], RARE: [], ACTIVE: [] }}
+                  days={moversDays}
+                />
+                <VolumePriceScatter items={items} onSelect={setSelectedId} selectedId={selectedId} />
+              </Suspense>
+            </div>
           </div>
 
-          <div data-test="chart-row" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <Suspense fallback={<Skeleton width="100%" height={240} />}>
-              <PoolIndexChart
-                poolIndex={moversResponse?.pool_index ?? { DISCONTINUED: [], RARE: [], ACTIVE: [] }}
-                days={moversDays}
-              />
-              <VolumePriceScatter items={items} onSelect={setSelectedId} selectedId={selectedId} />
-            </Suspense>
-          </div>
-
+          {/* 04·TBL + 02·INSP — shared 2-col grid; each child gets its own gutter (Phase 3 P4-T6) */}
           <div
             data-test="table-detail-grid"
             className="grid gap-4 mb-4 grid-cols-1 md:grid-cols-[1.4fr_1fr]"
           >
-            <CaseTable
-              items={filteredSorted}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              sort={sort}
-              setSort={setSort}
-              filter={filter}
-              setFilter={setFilter}
-              loading={fetching}
-            />
-            <div data-test="detail-panel" className="bg-bg-1 border border-line">
-              <DetailPanel
-                item={selected}
-                onAnalyze={analyzeCase}
-                analysis={analysis}
-                analyzing={analyzing}
-                error={analysisError}
-                fit={fit}
-                peers={peerCandidates}
-                onSelectPeer={(peerId) => setSelectedId(peerId)}
-                fromScan={lastSelectionSource === 'scan'}
-                onDevilsAdvocate={analyzeCaseDevilsAdvocate}
-                verdict={verdict?.verdict}
-                confidence={verdict?.confidence}
-                divergence={divergence}
-                scanSnapshotAt={lastScanSnapshotAt}
-                currentSnapshotAt={stats?.last_snapshot_at ?? null}
-                reticlePeers={reticlePeers}
-              />
+            <div className="flex">
+              <FrameGutter number="04" label="TBL" />
+              <div className="flex-1 min-w-0">
+                <CaseTable
+                  items={filteredSorted}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  sort={sort}
+                  setSort={setSort}
+                  filter={filter}
+                  setFilter={setFilter}
+                  loading={fetching}
+                />
+              </div>
+            </div>
+            <div className="flex">
+              <FrameGutter number="02" label="INSP" />
+              <div data-test="detail-panel" className="flex-1 min-w-0 bg-bg-1 border border-line">
+                <DetailPanel
+                  item={selected}
+                  onAnalyze={analyzeCase}
+                  analysis={analysis}
+                  analyzing={analyzing}
+                  error={analysisError}
+                  fit={fit}
+                  peers={peerCandidates}
+                  onSelectPeer={(peerId) => setSelectedId(peerId)}
+                  fromScan={lastSelectionSource === 'scan'}
+                  onDevilsAdvocate={analyzeCaseDevilsAdvocate}
+                  verdict={verdict?.verdict}
+                  confidence={verdict?.confidence}
+                  divergence={divergence}
+                  scanSnapshotAt={lastScanSnapshotAt}
+                  currentSnapshotAt={stats?.last_snapshot_at ?? null}
+                  reticlePeers={reticlePeers}
+                />
+              </div>
             </div>
           </div>
 
-          {/* T37 fold-in: feed the case list into ChatPanel so MentionPopover
+          {/* 05·CHAT — ChatPanel (Phase 3 P4-T6).
+              T37 fold-in: feed the case list into ChatPanel so MentionPopover
               activates on '@'. Mapped down to {id,name} to avoid leaking
               ItemFull internals into the chat surface. */}
-          <ChatPanel
-            ref={chatRef}
-            marketContext={marketContext}
-            cases={items.map((i) => ({ id: i.id, name: i.name }))}
-          />
+          <div className="flex">
+            <FrameGutter number="05" label="CHAT" />
+            <div className="flex-1 min-w-0">
+              <ChatPanel
+                ref={chatRef}
+                marketContext={marketContext}
+                cases={items.map((i) => ({ id: i.id, name: i.name }))}
+              />
+            </div>
+          </div>
         </div>
       )}
         </main>
 
-        <footer className="px-6 pb-6">
-          {hasPrice && (
-            <div className="mt-5 px-5 py-4 border border-line bg-bg-1 text-[10px] text-ink-2 tracking-[0.05em] leading-[1.6]">
-              <strong className="text-ink-1">// DISCLAIMER</strong> — Analytical tool, not investment advice. Steam Market prices via your Cloudflare Worker proxy, stored in D1. CS2 case prices are highly speculative; Valve can change drop pool status at any time. Steam takes 15% on resale.
-              <button
-                onClick={() => fetchAll(true)}
-                disabled={fetching}
-                className="ml-4 text-[9px] tracking-[0.15em] px-2.5 py-1 text-accent-data border border-accent-data bg-transparent"
-              >
-                {fetching ? '◌ SYNCING...' : '↻ REFRESH FEED'}
-              </button>
-              {stats?.last_cron && (
-                <span className="ml-4 text-ink-3">
-                  last cron: {stats.last_cron.succeeded}/{stats.last_cron.succeeded + stats.last_cron.failed} ok
-                  {stats.last_cron.error && <span className="text-state-err"> — {stats.last_cron.error}</span>}
-                </span>
-              )}
+        {/* 06·STATUS — disclaimer + cron sparkline (Phase 3 P4-T6) */}
+        <footer className="px-6 pb-6 flex">
+          <FrameGutter number="06" label="STATUS" />
+          <div className="flex-1 min-w-0">
+            {hasPrice && (
+              <div className="mt-5 px-5 py-4 border border-line bg-bg-1 text-[10px] text-ink-2 tracking-[0.05em] leading-[1.6]">
+                <strong className="text-ink-1">// DISCLAIMER</strong> — Analytical tool, not investment advice. Steam Market prices via your Cloudflare Worker proxy, stored in D1. CS2 case prices are highly speculative; Valve can change drop pool status at any time. Steam takes 15% on resale.
+                <button
+                  onClick={() => fetchAll(true)}
+                  disabled={fetching}
+                  className="ml-4 text-[9px] tracking-[0.15em] px-2.5 py-1 text-accent-data border border-accent-data bg-transparent"
+                >
+                  {fetching ? '◌ SYNCING...' : '↻ REFRESH FEED'}
+                </button>
+                {stats?.last_cron && (
+                  <span className="ml-4 text-ink-3">
+                    last cron: {stats.last_cron.succeeded}/{stats.last_cron.succeeded + stats.last_cron.failed} ok
+                    {stats.last_cron.error && <span className="text-state-err"> — {stats.last_cron.error}</span>}
+                  </span>
+                )}
+              </div>
+            )}
+            {/* T12: 24-bar case-sweep sparkline (60s polling). */}
+            <div className="mt-3 flex items-center gap-3 text-[10px] text-ink-3 tracking-[0.15em]">
+              <span>// CRON × 24</span>
+              <SystemStatus runs={cronRecent} />
             </div>
-          )}
-          {/* T12: 24-bar case-sweep sparkline (60s polling). */}
-          <div className="mt-3 flex items-center gap-3 text-[10px] text-ink-3 tracking-[0.15em]">
-            <span>// CRON × 24</span>
-            <SystemStatus runs={cronRecent} />
           </div>
         </footer>
       </div>
