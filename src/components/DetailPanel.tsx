@@ -15,6 +15,7 @@ import { PeersList } from './PeersList'
 import { RoiCalculator } from './RoiCalculator'
 import { DecisionLog } from './DecisionLog'
 import { HypothesisLedger } from './HypothesisLedger'
+import { CatalystJournal } from './CatalystJournal'
 import { VerdictBadge } from './VerdictBadge'
 import type { ItemFull } from './CaseTable'
 import type { FitResult } from '../lib/fitScore'
@@ -281,6 +282,9 @@ export function DetailPanel({
           priceAtCommit={item.price?.lowest ?? 0}
           snapshotAt={fit.snapshot_at}
         />
+      )}
+      {item && (
+        <CatalystJournal caseId={item.id} caseName={item.name} />
       )}
     </div>
   )
