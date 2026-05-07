@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import { C } from '../lib/theme'
 
 function highlightInline(s: string): string {
@@ -8,7 +9,18 @@ function highlightInline(s: string): string {
     .replace(/`([^`]+)`/g, `<span style="color:${C.yellow};background:rgba(251,191,36,0.08);padding:0 4px">$1</span>`)
 }
 
-export function AnalysisOutput({ text }: { text: string }) {
+interface Props {
+  text: string
+  /** Optional cache key parts. When both are provided AND both caches exist, render flip pill. */
+  caseId?: string
+  snapshotAt?: number
+}
+
+function readCache(key: string): string | null {
+  try { return localStorage.getItem(key) } catch { return null }
+}
+
+function ProseBlock({ text }: { text: string }) {
   const lines = text.split('\n')
   return (
     <div className="font-prose t-body text-ink-1 bg-bg-0 border border-line px-4 py-3.5">
@@ -39,6 +51,59 @@ export function AnalysisOutput({ text }: { text: string }) {
           )
         return <div key={i} className="mb-1" dangerouslySetInnerHTML={{ __html: highlightInline(t) }} />
       })}
+    </div>
+  )
+}
+
+export function AnalysisOutput({ text, caseId, snapshotAt }: Props) {
+  // P0-1 audit fix: asymmetric cache keys.
+  // Normal:  cs-analysis:${id}:${snap}        (NO v2: segment — see persist.ts)
+  // Devil:   cs-analysis-devil:v2:${id}:${snap}
+  const { normalCache, devilCache } = useMemo(() => {
+    if (!caseId || snapshotAt === undefined) return { normalCache: null, devilCache: null }
+    return {
+      normalCache: readCache(`cs-analysis:${caseId}:${snapshotAt}`),
+      devilCache: readCache(`cs-analysis-devil:v2:${caseId}:${snapshotAt}`),
+    }
+  }, [caseId, snapshotAt])
+
+  const bothExist = !!(normalCache && devilCache)
+  const [view, setView] = useState<'normal' | 'devil'>('normal')
+
+  // If the active key set changes (e.g., new snapshot), reset back to NORMAL.
+  useEffect(() => { setView('normal') }, [caseId, snapshotAt])
+
+  const activeText = bothExist
+    ? (view === 'devil' ? (devilCache as string) : (normalCache as string))
+    : text
+
+  if (!bothExist) {
+    return <ProseBlock text={text} />
+  }
+
+  return (
+    <div>
+      <div role="tablist" className="inline-flex border border-line text-[10px] tracking-[0.15em] mb-2">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'normal'}
+          className={`px-2 py-1 ${view === 'normal' ? 'bg-accent-sel/10 text-accent-sel' : 'text-ink-3 hover:text-ink-1'}`}
+          onClick={() => setView('normal')}
+        >
+          NORMAL
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'devil'}
+          className={`px-2 py-1 ${view === 'devil' ? 'bg-accent-sel/10 text-accent-sel' : 'text-ink-3 hover:text-ink-1'}`}
+          onClick={() => setView('devil')}
+        >
+          DEVIL
+        </button>
+      </div>
+      <ProseBlock text={activeText} />
     </div>
   )
 }

@@ -248,7 +248,13 @@ export function DetailPanel({
           </div>
         </div>
         {error && <Banner variant="error" className="mb-3">Analysis failed. {error}</Banner>}
-        {analysis && <AnalysisOutput text={analysis} />}
+        {analysis && (
+          <AnalysisOutput
+            text={analysis}
+            caseId={item?.id}
+            snapshotAt={currentSnapshotAt ?? undefined}
+          />
+        )}
         {!analysis && !analyzing && !error && (
           <div className="text-[11px] text-ink-3 p-5 border border-dashed border-line-bright text-center tracking-[0.1em]">
             Run analysis to get a Claude-generated investment thesis using current market data.
