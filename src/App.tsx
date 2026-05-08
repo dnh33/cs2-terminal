@@ -337,6 +337,10 @@ function AppDashboard({ onLogout }: DashboardProps) {
   // Initialized from the same loadLastScan() call already used for scan-text
   // hydration on mount. Distinct from lastScanSnapshotAt (seconds, server
   // snapshot) — this is local Date.now() ms.
+  // Invariant: this state and the scan-text rehydration call (later in the
+  // file) read the SAME ScanRecord. Both reads observe a single persisted
+  // localStorage entry. The setter (in runScan) writes Date.now() right
+  // after saveScan(), keeping savedAt and the in-state value in sync.
   const [lastScanSavedAtMs, setLastScanSavedAtMs] = useState<number | null>(() => {
     const last = loadLastScan()
     return last?.savedAt ?? null

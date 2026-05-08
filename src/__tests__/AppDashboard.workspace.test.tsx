@@ -7,9 +7,9 @@ mockAuth()
 
 describe('AppDashboard workspace canvas (Phase 4.5 Plan 3)', () => {
   beforeEach(() => {
+    localStorage.clear()
     vi.resetModules()
     window.history.replaceState({}, '', '/')
-    localStorage.clear()
   })
 
   it('renders a workspace-canvas wrapping the four region markers', async () => {

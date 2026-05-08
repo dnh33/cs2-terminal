@@ -12,9 +12,9 @@ describe('AppDashboard responsive structure (Phase 4.5 Plan 3 — post canvas re
   // 1280px browser smoke at the Plan 3 T4 verification gate.
 
   beforeEach(() => {
+    localStorage.clear()
     vi.resetModules()
     window.history.replaceState({}, '', '/')
-    localStorage.clear()
   })
 
   it('chart-region nests its 2-chart inner content as a single descendant block', async () => {
