@@ -90,6 +90,32 @@ type AuthState =
 // See src/spec/ for showcases. Pathname check happens before any auth probe.
 const SpecRoute = lazy(() => import('./spec/HypothesisLedgerShowcase'))
 
+function InspEmptyState({ lastScanAt, onOpenCmdK }: { lastScanAt?: number; onOpenCmdK?: () => void }) {
+  const stamp = lastScanAt
+    ? `LAST SCAN · ${new Date(lastScanAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+    : 'NO SCAN YET'
+  return (
+    <div data-test="insp-empty" className="px-5 py-6">
+      <div className="text-[11px] tracking-[0.1em] text-ink-2 tabular-nums">
+        {stamp}
+      </div>
+      <div className="mt-6 space-y-3 font-serif text-[14px] leading-[1.65] text-ink-1">
+        <div>
+          <button
+            type="button"
+            onClick={onOpenCmdK}
+            className="bg-transparent text-ink-1 hover:text-accent-sel cursor-pointer p-0 m-0 font-serif text-[14px]"
+            aria-label="Open command palette to run scan"
+          >
+            ▸ <kbd className="text-accent-data not-italic">⌘K</kbd> &nbsp; RUN SCAN
+          </button>
+        </div>
+        <div>▸ &nbsp;SELECT FROM TABLE</div>
+      </div>
+    </div>
+  )
+}
+
 export default function AppGate() {
   // Public spec-preview route — no auth, no worker calls
   if (typeof window !== 'undefined' && window.location.pathname.startsWith('/spec/hypothesis-ledger')) {
@@ -307,6 +333,14 @@ function AppDashboard({ onLogout }: DashboardProps) {
   // we only show the pill when the underlying snapshot still matches the
   // scan that produced the chip, otherwise the breadcrumb would lie.
   const [lastScanSnapshotAt, setLastScanSnapshotAt] = useState<number | null>(null)
+  // Phase 4.5 Plan 3 — drives INSP empty-state "LAST SCAN · HH:MM" line.
+  // Initialized from the same loadLastScan() call already used for scan-text
+  // hydration on mount. Distinct from lastScanSnapshotAt (seconds, server
+  // snapshot) — this is local Date.now() ms.
+  const [lastScanSavedAtMs, setLastScanSavedAtMs] = useState<number | null>(() => {
+    const last = loadLastScan()
+    return last?.savedAt ?? null
+  })
   // P2-#5: AbortController shared by analyzeCase / analyzeCaseDevilsAdvocate.
   // Re-runs (button mash, selection change) abort the in-flight request so
   // we don't race two streams into the same setAnalysis().
@@ -688,6 +722,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
       // stats.last_snapshot_at — once cron rolls forward, the breadcrumb is
       // hidden so we don't claim a stale market scan as the current source.
       setLastScanSnapshotAt(stats?.last_snapshot_at ?? null)
+      setLastScanSavedAtMs(Date.now())
     } catch (e: any) {
       setScanError(e.message)
     } finally {
@@ -921,92 +956,108 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
 
       {hasPrice && (
         <div className="px-6 py-5">
-          {/* 01·MKT — MarketScan + Movers (Phase 3 P4-T6) */}
-          <div className="flex">
-            <FrameGutter number="01" label="MKT" />
-            <div className="flex-1 min-w-0">
-              <div data-test="market-scan-panel">
-                <MarketScanPanel
-                  items={items}
-                  onScan={runScan}
-                  scan={scan}
-                  scanning={scanning}
-                  error={scanError}
-                  onSelectCase={(id) => setSelectedId(id, 'scan')}
-                />
-              </div>
-
-              <div className="mb-4" data-test="movers-panel">
-                <MoversPanel onSelect={setSelectedId} earliestSnapshotAge={earliestSnapshotAge} />
-              </div>
-            </div>
-          </div>
-
-          {/* 03·CHRT — Pool Index + Volume/Price scatter (Phase 3 P4-T6) */}
-          <div className="flex">
-            <FrameGutter number="03" label="CHRT" />
-            <div data-test="chart-row" className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <Suspense fallback={<Skeleton width="100%" height={240} />}>
-                <PoolIndexChart
-                  poolIndex={moversResponse?.pool_index ?? { DISCONTINUED: [], RARE: [], ACTIVE: [] }}
-                  days={moversDays}
-                />
-                <VolumePriceScatter items={items} onSelect={setSelectedId} selectedId={selectedId} />
-              </Suspense>
-            </div>
-          </div>
-
-          {/* 04·TBL + 02·INSP — shared 2-col grid; each child gets its own gutter (Phase 3 P4-T6) */}
+          {/* WORKSPACE CANVAS — Phase 4.5 Plan 3 — outer flex, hairline borders, sticky INSP.
+              Sticky containing block is the viewport scroll context (no overflow ancestor),
+              so INSP stays visible past the chat region too — releases visually when the
+              page bottom is in view. Practical fit for the synthesis "sticky right-rail" intent. */}
           <div
-            data-test="table-detail-grid"
-            className="grid gap-4 mb-4 grid-cols-1 md:grid-cols-[1.4fr_1fr]"
+            data-test="workspace-canvas"
+            className="border border-line flex flex-col lg:flex-row"
           >
-            <div className="flex">
-              <FrameGutter number="04" label="TBL" />
-              <div className="flex-1 min-w-0">
-                <CaseTable
-                  items={filteredSorted}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                  sort={sort}
-                  setSort={setSort}
-                  filter={filter}
-                  setFilter={setFilter}
-                  loading={fetching}
-                />
+            {/* LEFT: cols 1-8 (~66.67%) — MKT / CHRT / TBL stacked, hairline-divided */}
+            <div className="flex-1 min-w-0 lg:border-r lg:border-line">
+              <div data-test="mkt-region" className="flex border-b border-line">
+                <FrameGutter number="01" label="MKT" noBorder />
+                <div className="flex-1 min-w-0">
+                  <div data-test="market-scan-panel">
+                    <MarketScanPanel
+                      items={items}
+                      onScan={runScan}
+                      scan={scan}
+                      scanning={scanning}
+                      error={scanError}
+                      onSelectCase={(id) => setSelectedId(id, 'scan')}
+                    />
+                  </div>
+                  <div data-test="movers-panel">
+                    <MoversPanel onSelect={setSelectedId} earliestSnapshotAge={earliestSnapshotAge} />
+                  </div>
+                </div>
+              </div>
+
+              <div data-test="chart-region" className="flex border-b border-line">
+                <FrameGutter number="03" label="CHRT" noBorder />
+                <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-2">
+                  <Suspense fallback={<Skeleton width="100%" height={240} />}>
+                    <PoolIndexChart
+                      poolIndex={moversResponse?.pool_index ?? { DISCONTINUED: [], RARE: [], ACTIVE: [] }}
+                      days={moversDays}
+                    />
+                    <VolumePriceScatter items={items} onSelect={setSelectedId} selectedId={selectedId} />
+                  </Suspense>
+                </div>
+              </div>
+
+              <div data-test="tbl-region" className="flex">
+                <FrameGutter number="04" label="TBL" noBorder />
+                <div className="flex-1 min-w-0">
+                  <CaseTable
+                    items={filteredSorted}
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
+                    sort={sort}
+                    setSort={setSort}
+                    filter={filter}
+                    setFilter={setFilter}
+                    loading={fetching}
+                  />
+                </div>
               </div>
             </div>
-            <div className="flex">
-              <FrameGutter number="02" label="INSP" />
-              <div data-test="detail-panel" className="flex-1 min-w-0 bg-bg-1 border border-line">
-                <DetailPanel
-                  item={selected}
-                  onAnalyze={analyzeCase}
-                  analysis={analysis}
-                  analyzing={analyzing}
-                  error={analysisError}
-                  fit={fit}
-                  peers={peerCandidates}
-                  onSelectPeer={(peerId) => setSelectedId(peerId)}
-                  fromScan={lastSelectionSource === 'scan'}
-                  onDevilsAdvocate={analyzeCaseDevilsAdvocate}
-                  verdict={verdict?.verdict}
-                  confidence={verdict?.confidence}
-                  divergence={divergence}
-                  scanSnapshotAt={lastScanSnapshotAt}
-                  currentSnapshotAt={stats?.last_snapshot_at ?? null}
-                  reticlePeers={reticlePeers}
-                />
+
+            {/* RIGHT: cols 9-12 (~33.33%) — INSP, sticky over CHAT */}
+            <div
+              data-test="insp-region"
+              className="lg:w-1/3 lg:shrink-0 lg:sticky lg:top-[var(--header-h)] lg:self-start flex bg-bg-1"
+            >
+              <FrameGutter number="02" label="INSP" noBorder />
+              <div className="flex-1 min-w-0">
+                {selected ? (
+                  <div data-test="detail-panel">
+                    <DetailPanel
+                      item={selected}
+                      onAnalyze={analyzeCase}
+                      analysis={analysis}
+                      analyzing={analyzing}
+                      error={analysisError}
+                      fit={fit}
+                      peers={peerCandidates}
+                      onSelectPeer={(peerId) => setSelectedId(peerId)}
+                      fromScan={lastSelectionSource === 'scan'}
+                      onDevilsAdvocate={analyzeCaseDevilsAdvocate}
+                      verdict={verdict?.verdict}
+                      confidence={verdict?.confidence}
+                      divergence={divergence}
+                      scanSnapshotAt={lastScanSnapshotAt}
+                      currentSnapshotAt={stats?.last_snapshot_at ?? null}
+                      reticlePeers={reticlePeers}
+                    />
+                  </div>
+                ) : (
+                  <InspEmptyState
+                    lastScanAt={lastScanSavedAtMs ?? undefined}
+                    onOpenCmdK={() => setCmdkOpen(true)}
+                  />
+                )}
               </div>
             </div>
           </div>
 
-          {/* 05·CHAT — ChatPanel (Phase 3 P4-T6).
-              T37 fold-in: feed the case list into ChatPanel so MentionPopover
-              activates on '@'. Mapped down to {id,name} to avoid leaking
-              ItemFull internals into the chat surface. */}
-          <div className="flex">
-            <FrameGutter number="05" label="CHAT" />
+          {/* CHAT — sibling of workspace-canvas (NOT inside).
+              Plan 5 will replace mobile DetailPanel.drawer with route-based detail
+              per spec § 1 line 135 — drop detail-mobile + drawer test then. */}
+          <div data-test="chat-region" className="flex border border-t-0 border-line">
+            <FrameGutter number="05" label="CHAT" noBorder />
             <div className="flex-1 min-w-0">
               <ChatPanel
                 ref={chatRef}
