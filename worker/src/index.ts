@@ -40,7 +40,7 @@ import { handleCronRecent } from './handlers/cronRecent'
 export interface Env {
   DB: D1Database
   OPENROUTER_API_KEY: string
-  OPENROUTER_MODEL: string                            // e.g. "anthropic/claude-sonnet-4.5"
+  OPENROUTER_MODEL: string                            // e.g. "deepseek/deepseek-v4-pro"
   OPENROUTER_EMBEDDING_MODEL?: string                 // e.g. "openai/text-embedding-3-small"
   OPENROUTER_APP_NAME: string                         // shown on OpenRouter leaderboards
   OPENROUTER_APP_URL: string                          // your deployed frontend URL
@@ -792,7 +792,7 @@ function extractToken(request: Request): string | null {
 
 // ─── LLM proxy (OpenRouter) ─────────────────────────────────────────────────
 
-const DEFAULT_MODEL = 'anthropic/claude-sonnet-4.5'
+const DEFAULT_MODEL = 'deepseek/deepseek-v4-pro'
 
 /**
  * Lazily construct the OpenRouter client per request. The SDK is cheap to
