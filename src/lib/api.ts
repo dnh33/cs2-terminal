@@ -214,6 +214,19 @@ export async function fetchStats(): Promise<MarketStats> {
   return jsonGet<MarketStats>('/stats')
 }
 
+export interface AppConfig {
+  model: string
+}
+
+/**
+ * Phase 4.5 Plan 4 follow-up — fetches the worker's active model id so the
+ * frontend label can auto-sync with the OPENROUTER_MODEL env var. Pure local
+ * read on the worker side (no OpenRouter call, no quota impact).
+ */
+export async function fetchConfig(): Promise<AppConfig> {
+  return jsonGet<AppConfig>('/config')
+}
+
 export interface CronRecentRun {
   started_at: number
   finished_at: number | null

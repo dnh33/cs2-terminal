@@ -1218,6 +1218,14 @@ export default {
         }, env)
       }
 
+      // Phase 4.5 Plan 4 — config endpoint surfaces the worker's active model
+      // id to the frontend label. Reads env, no OpenRouter call. Frontend
+      // header + footer-strip auto-sync to whatever OPENROUTER_MODEL is set
+      // server-side, falling back to DEFAULT_MODEL if env is missing.
+      if (url.pathname === '/config' && request.method === 'GET') {
+        return jsonResponse({ model: env.OPENROUTER_MODEL || DEFAULT_MODEL }, env)
+      }
+
       // Latest
       if (url.pathname === '/latest' && request.method === 'GET') {
         const rows = await getLatest(env)

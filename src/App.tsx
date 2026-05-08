@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom'
 import { useMarketData } from './hooks/useMarketData'
 import { useHypothesisLedger } from './lib/useHypothesisLedger'
 import { useCatalystJournal } from './lib/useCatalystJournal'
-import { todayLocal, formatShortDate } from './lib/dates'
+import { todayLocal, formatShortDate, formatAge } from './lib/dates'
 import { filterByItemMap } from './lib/filterByItemMap'
 import { Header } from './components/Header'
 import { Ticker } from './components/Ticker'
@@ -48,6 +48,7 @@ import { C } from './lib/theme'
 import { computeFit, type FitResult } from './lib/fitScore'
 import { fetchItemMedians, type ItemMediansResponse } from './lib/itemMedians'
 import { runResolverPass } from './lib/hypothesisResolverPass'
+import { useDisplayedModel } from './lib/config'
 
 // Worker URL precedence mirrors src/lib/api.ts so telemetry POST hits the
 // same origin as the rest of the API.
@@ -284,6 +285,17 @@ function AppDashboard({ onLogout }: DashboardProps) {
   // we don't fan out 41× /api/items/medians calls on dashboard load.
   const [itemMedians, setItemMedians] = useState<Record<string, ItemMediansResponse>>({})
   const [cmdkOpen, setCmdkOpen] = useState(false)
+  // Phase 4.5 Plan 4 — disclaimer disclosure (collapsed by default)
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false)
+  // Phase 4.5 Plan 4 follow-up — model id auto-synced from worker /config.
+  const displayedModel = useDisplayedModel()
+  // Phase 4.5 Plan 4 — feed staleness for FooterStrip (matches Header threshold:
+  // > 2h = STALE; ≤ 2h = FRESH; null = unknown).
+  const feedStaleness: 'FRESH' | 'STALE' | '—' = (() => {
+    if (!stats?.last_snapshot_at) return '—'
+    const ageSec = Math.floor(Date.now() / 1000) - stats.last_snapshot_at
+    return ageSec > 7200 ? 'STALE' : 'FRESH'
+  })()
   // T8: dedicated App-level state for the PoolIndexChart. We intentionally do
   // NOT hoist MoversPanel's internal `days` state — keeping its fetch loop
   // self-contained minimizes blast radius (its tests, polish tests, and
@@ -1095,41 +1107,63 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
       )}
         </main>
 
-        {/* 06·STATUS — disclaimer + cron sparkline (Phase 3 P4-T6) */}
-        <footer className="px-6 pb-6 flex">
-          <FrameGutter number="06" label="STATUS" />
-          <div className="flex-1 min-w-0">
-            {hasPrice && (
-              <div className="mt-5 px-5 py-4 border border-line bg-bg-1 text-[10px] text-ink-2 tracking-[0.05em] leading-[1.6]">
-                <strong className="text-ink-1">// DISCLAIMER</strong> — Analytical tool, not investment advice. Steam Market prices via your Cloudflare Worker proxy, stored in D1. CS2 case prices are highly speculative; Valve can change drop pool status at any time. Steam takes 15% on resale.
-                <button
-                  onClick={() => fetchAll(true)}
-                  disabled={fetching}
-                  className="ml-4 text-[9px] tracking-[0.15em] px-2.5 py-1 text-accent-data border border-accent-data bg-transparent"
-                >
-                  {fetching ? '◌ SYNCING...' : '↻ REFRESH FEED'}
-                </button>
-                {stats?.last_cron && (
-                  <span className="ml-4 text-ink-3">
-                    last cron: {stats.last_cron.succeeded}/{stats.last_cron.succeeded + stats.last_cron.failed} ok
-                    {stats.last_cron.error && <span className="text-state-err"> — {stats.last_cron.error}</span>}
-                  </span>
-                )}
-              </div>
-            )}
-            {/* T12 + Plan 5 T4: 3-tier sparkline cluster (60s polling). Caption
-                stacked above the cluster so per-tier row labels stay aligned. */}
-            <div className="mt-3 text-[10px] text-ink-3 tracking-[0.15em]">
-              <div className="mb-1">// CRON × 24</div>
-              <SystemStatus
-                runsCase={cronCase}
-                runsHi={cronHi}
-                runsLo={cronLo}
-                failCase={failCase}
-                failHi={failHi}
-                failLo={failLo}
-              />
+        {/* 06·STATUS — Phase 4.5 Plan 4 — single-row strip + sparkline cluster */}
+        <footer className="border-t border-line">
+          {/* Single row: cron-age · ok-count · feed · model · build · disclaimer · refresh */}
+          <div data-test="footer-strip" className="px-6 py-2.5 flex items-center gap-3 text-[10px] text-ink-2 tracking-[0.1em] tabular-nums flex-wrap">
+            <FrameGutter number="06" label="STATUS" noBorder />
+            <span>// last cron {stats?.last_cron ? formatAge(Math.floor(Date.now() / 1000) - stats.last_cron.started_at) : '—'}</span>
+            <span className="text-ink-3">·</span>
+            <span>{stats?.last_cron ? `${stats.last_cron.succeeded}/${stats.last_cron.succeeded + stats.last_cron.failed} ok` : '—'}</span>
+            <span className="text-ink-3">·</span>
+            <span data-test="footer-feed-state">
+              feed{' '}
+              <span style={{ color: feedStaleness === 'FRESH' ? 'var(--accent-data)' : feedStaleness === 'STALE' ? 'var(--state-warn)' : 'var(--ink-3)' }}>
+                {feedStaleness}
+              </span>
+            </span>
+            <span className="text-ink-3">·</span>
+            <span>model <span className="text-accent-data">{displayedModel ?? '—'}</span></span>
+            <span className="text-ink-3">·</span>
+            <span>build <span data-test="footer-build-hash" className="text-ink-1">#{import.meta.env.VITE_BUILD_HASH ?? 'dev'}</span></span>
+            <span className="text-ink-3">·</span>
+            <button
+              type="button"
+              data-test="footer-disclaimer-trigger"
+              aria-expanded={disclaimerOpen}
+              onClick={() => setDisclaimerOpen((v) => !v)}
+              className="bg-transparent text-ink-2 hover:text-ink-1 p-0 m-0 cursor-pointer"
+            >
+              disclaimer {disclaimerOpen ? '▾' : '▸'}
+            </button>
+            <span className="ml-auto">
+              <button
+                type="button"
+                onClick={() => fetchAll(true)}
+                disabled={fetching}
+                className="text-[9px] tracking-[0.15em] px-2.5 py-1 text-accent-data border border-accent-data bg-transparent disabled:opacity-50"
+              >
+                {fetching ? '◌ SYNCING' : '↻ REFRESH'}
+              </button>
+            </span>
+          </div>
+
+          {disclaimerOpen && (
+            <div data-test="footer-disclaimer-content" className="px-6 pb-3 text-[10px] text-ink-2 leading-[1.6]">
+              Analytical tool, not investment advice. Steam Market prices via your Cloudflare Worker proxy, stored in D1. CS2 case prices are highly speculative; Valve can change drop pool status at any time. Steam takes 15% on resale.
             </div>
+          )}
+
+          <div className="px-6 pb-6 text-[10px] text-ink-3 tracking-[0.15em]">
+            <div className="mb-1">// CRON × 24</div>
+            <SystemStatus
+              runsCase={cronCase}
+              runsHi={cronHi}
+              runsLo={cronLo}
+              failCase={failCase}
+              failHi={failHi}
+              failLo={failLo}
+            />
           </div>
         </footer>
       </div>

@@ -3,6 +3,8 @@ import { PaletteSwitch } from './primitives/PaletteSwitch'
 import { StatusSigil } from './primitives/StatusSigil'
 import { UtcClock } from './primitives/UtcClock'
 import type { MarketStats } from '../lib/api'
+import { formatAge } from '../lib/dates'
+import { useDisplayedModel } from '../lib/config'
 
 interface Props {
   fetching: boolean
@@ -11,14 +13,8 @@ interface Props {
   onOpenCmdK?: () => void
 }
 
-function formatAge(seconds: number): string {
-  if (seconds < 60) return `${seconds}s ago`
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m ago`
-  return `${Math.floor(seconds / 86400)}d ago`
-}
-
 export function Header({ fetching, stats, onLogout, onOpenCmdK }: Props) {
+  const displayedModel = useDisplayedModel()
   const lastSnap = stats?.last_snapshot_at
   const ageSec = lastSnap ? Math.floor(Date.now() / 1000) - lastSnap : null
   const stale = ageSec != null && ageSec > 7200
@@ -57,7 +53,7 @@ export function Header({ fetching, stats, onLogout, onOpenCmdK }: Props) {
           )}
           <PaletteSwitch />
           <span className="text-ink-3">·</span>
-          <span className="t-data text-accent-data">claude-sonnet-4.5</span>
+          <span className="t-data text-accent-data">{displayedModel ?? '…'}</span>
           <span className="text-ink-3">·</span>
           <UtcClock />
           {onLogout && (
