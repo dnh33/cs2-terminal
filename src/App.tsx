@@ -48,7 +48,7 @@ import { C } from './lib/theme'
 import { computeFit, type FitResult } from './lib/fitScore'
 import { fetchItemMedians, type ItemMediansResponse } from './lib/itemMedians'
 import { runResolverPass } from './lib/hypothesisResolverPass'
-import { DISPLAYED_MODEL_ID } from './lib/config'
+import { useDisplayedModel } from './lib/config'
 
 // Worker URL precedence mirrors src/lib/api.ts so telemetry POST hits the
 // same origin as the rest of the API.
@@ -287,6 +287,8 @@ function AppDashboard({ onLogout }: DashboardProps) {
   const [cmdkOpen, setCmdkOpen] = useState(false)
   // Phase 4.5 Plan 4 — disclaimer disclosure (collapsed by default)
   const [disclaimerOpen, setDisclaimerOpen] = useState(false)
+  // Phase 4.5 Plan 4 follow-up — model id auto-synced from worker /config.
+  const displayedModel = useDisplayedModel()
   // Phase 4.5 Plan 4 — feed staleness for FooterStrip (matches Header threshold:
   // > 2h = STALE; ≤ 2h = FRESH; null = unknown).
   const feedStaleness: 'FRESH' | 'STALE' | '—' = (() => {
@@ -1100,7 +1102,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
               </span>
             </span>
             <span className="text-ink-3">·</span>
-            <span>model <span className="text-accent-data">{DISPLAYED_MODEL_ID}</span></span>
+            <span>model <span className="text-accent-data">{displayedModel ?? '—'}</span></span>
             <span className="text-ink-3">·</span>
             <span>build <span data-test="footer-build-hash" className="text-ink-1">#{import.meta.env.VITE_BUILD_HASH ?? 'dev'}</span></span>
             <span className="text-ink-3">·</span>

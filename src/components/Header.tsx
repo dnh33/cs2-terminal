@@ -4,7 +4,7 @@ import { StatusSigil } from './primitives/StatusSigil'
 import { UtcClock } from './primitives/UtcClock'
 import type { MarketStats } from '../lib/api'
 import { formatAge } from '../lib/dates'
-import { DISPLAYED_MODEL_ID } from '../lib/config'
+import { useDisplayedModel } from '../lib/config'
 
 interface Props {
   fetching: boolean
@@ -14,6 +14,7 @@ interface Props {
 }
 
 export function Header({ fetching, stats, onLogout, onOpenCmdK }: Props) {
+  const displayedModel = useDisplayedModel()
   const lastSnap = stats?.last_snapshot_at
   const ageSec = lastSnap ? Math.floor(Date.now() / 1000) - lastSnap : null
   const stale = ageSec != null && ageSec > 7200
@@ -52,7 +53,7 @@ export function Header({ fetching, stats, onLogout, onOpenCmdK }: Props) {
           )}
           <PaletteSwitch />
           <span className="text-ink-3">·</span>
-          <span className="t-data text-accent-data">{DISPLAYED_MODEL_ID}</span>
+          <span className="t-data text-accent-data">{displayedModel ?? '…'}</span>
           <span className="text-ink-3">·</span>
           <UtcClock />
           {onLogout && (
