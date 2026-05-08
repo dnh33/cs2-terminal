@@ -16,13 +16,17 @@ ALLOWED_ORIGIN = "https://your-site.netlify.app"
 STEAM_REQUEST_SPACING_MS = "4000"
 
 # OpenRouter model selection. Per-request override possible via the /chat body.
-# Browse models at https://openrouter.ai/models — recommended starters:
-#   anthropic/claude-sonnet-4.5    (default, balanced for analytical writing)
-#   anthropic/claude-opus-4.5      (highest quality, more expensive)
-#   openai/gpt-5                   (alternative top-tier)
-#   google/gemini-2.5-pro          (strong on long context)
-#   deepseek/deepseek-chat-v3      (~10× cheaper, surprisingly capable)
-OPENROUTER_MODEL = "anthropic/claude-sonnet-4.5"
+# Browse models at https://openrouter.ai/models — options:
+#   inclusionai/ring-2.6-1t:free   (default, free-tier, rate-limited)
+#   anthropic/claude-sonnet-4.5    (paid, balanced for analytical writing)
+#   anthropic/claude-opus-4.5      (paid, highest quality)
+#   openai/gpt-5                   (paid, alternative top-tier)
+#   google/gemini-2.5-pro          (paid, strong on long context)
+#   deepseek/deepseek-chat-v3      (paid, cheap)
+# `:free` suffix = OpenRouter free-tier — typically tens-to-low-hundreds
+# requests/day per key, separate from any paid quota. If usage exceeds the
+# window, swap to a paid model id and redeploy.
+OPENROUTER_MODEL = "inclusionai/ring-2.6-1t:free"
 
 # Embedding model — used by /embeddings for sqlite-vec / semantic search.
 # Browse: https://openrouter.ai/models?fmt=cards&output_modalities=embeddings
