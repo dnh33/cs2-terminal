@@ -20,4 +20,18 @@ describe('FrameGutter', () => {
     expect(el?.className).toContain('hidden')
     expect(el?.className).toContain('md:flex')
   })
+
+  it('omits the right border when noBorder is true', () => {
+    const { container } = render(<FrameGutter number="01" label="MKT" noBorder />)
+    const el = container.querySelector('[data-frame-gutter]')
+    expect(el?.className).not.toContain('border-r')
+    expect(el?.className).toContain('w-6')
+    expect((el as HTMLElement).style.writingMode).toBe('vertical-rl')
+  })
+
+  it('keeps the right border by default', () => {
+    const { container } = render(<FrameGutter number="01" label="MKT" />)
+    const el = container.querySelector('[data-frame-gutter]')
+    expect(el?.className).toContain('border-r')
+  })
 })
