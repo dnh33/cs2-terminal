@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { CASE_DB } from '../lib/cases'
 import type { CaseRecord } from '../lib/cases'
 import type { PriceData } from '../lib/metrics'
+import type { MoverRow } from '../lib/api'
 import { Skeleton } from './primitives/Skeleton'
 import { NumberFlip } from './primitives/NumberFlip'
 
@@ -21,7 +22,7 @@ function StatBlock({ label, value, sub, accent }: { label: string; value: React.
   )
 }
 
-export function MarketStats({ items }: { items: ItemWithPrice[] }) {
+export function MarketStats({ items, topMover }: { items: ItemWithPrice[]; topMover?: MoverRow | null }) {
   const stats = useMemo(() => {
     const wp = items.filter(i => i.price)
     if (wp.length === 0) return null
