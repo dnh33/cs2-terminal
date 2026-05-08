@@ -6,6 +6,11 @@
 
 :root,
 :root[data-palette="std"] {
+  /* Phase 4.5 Plan 3 — header height token referenced by sticky INSP (cols 9-12).
+     56px = current rendered Header height (px-5 + py-3 + content). If Header
+     content gains a row, bump this and re-verify the sticky offset in browser. */
+  --header-h: 56px;
+
   /* === COLOR TOKENS — channel-triplet form ===
      Each color is declared TWICE: once as space-separated R G B
      (consumed by Tailwind via rgb(var(--x-rgb) / <alpha-value>) so
