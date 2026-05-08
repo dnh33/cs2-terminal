@@ -290,6 +290,11 @@ function AppDashboard({ onLogout }: DashboardProps) {
   // window-pill behavior stay untouched). The chart uses its own 30D window.
   const [moversResponse, setMoversResponse] = useState<MoversResponse | null>(null)
   const moversDays = 30
+  // Phase 4.5 Plan 1 — fetches the 24h-window top mover for the HERO STRIP
+  // BIGGEST MOVER 24H satellite block. Independent of moversResponse (which
+  // drives the 30-day pool-index chart). undefined = loading; null = fetched
+  // but no movers in window; MoverRow when present.
+  const [topMover24h, setTopMover24h] = useState<import('./lib/api').MoverRow | null | undefined>(undefined)
   // T12 + Plan 5 T4: SystemStatus footer — 3-tier sparkline cluster
   // (case / item-high / item-low), refreshed every 60s. Each tier is fetched
   // independently via Promise.allSettled so one failing tier doesn't stall the
@@ -327,6 +332,22 @@ function AppDashboard({ onLogout }: DashboardProps) {
       .catch(() => { /* chart falls back to empty pool_index */ })
     return () => { cancel = true }
   }, [moversDays])
+  // Phase 4.5 Plan 1 — fetch 24h-window movers once on mount; pick top by
+  // abs(pct_change) for HERO STRIP BIGGEST MOVER 24H block.
+  useEffect(() => {
+    let cancelled = false
+    fetchMovers(1)
+      .then((res) => {
+        if (cancelled) return
+        const sorted = res.movers.slice().sort((a, b) => Math.abs(b.pct_change) - Math.abs(a.pct_change))
+        setTopMover24h(sorted[0] ?? null)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setTopMover24h(null)
+      })
+    return () => { cancelled = true }
+  }, [])
   // P1-#3 prep: track the snapshot timestamp captured at the most recent
   // successful market scan completion. DetailPanel uses this together with
   // the current `stats.last_snapshot_at` to gate the "from this scan" pill —
@@ -911,7 +932,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
       <div className="min-h-screen flex flex-col">
         <Header fetching={fetching} stats={stats} onLogout={onLogout} onOpenCmdK={() => setCmdkOpen(true)} />
         {hasPrice && <Ticker rows={tickerRows} />}
-        {hasPrice && <MarketStats items={items} />}
+        {hasPrice && <MarketStats items={items} topMover={topMover24h} />}
 
         <main id="main" className="flex-1">
       {!hasPrice && (
