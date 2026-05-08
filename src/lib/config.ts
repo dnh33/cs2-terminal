@@ -10,7 +10,7 @@ import { fetchConfig } from './api'
  * one fetch per session. Dev-mode fallback while the request is in flight:
  * the loading state returns null and consumers render an em-dash placeholder.
  */
-const FALLBACK_MODEL = 'claude-sonnet-4.5'
+const FALLBACK_MODEL = 'ring-2.6-1t:free'
 
 let cached: string | null = null
 let inFlight: Promise<string> | null = null
@@ -26,7 +26,7 @@ export function useDisplayedModel(): string | null {
     if (!inFlight) {
       inFlight = fetchConfig()
         .then((c) => {
-          // Worker may return the prefixed form (e.g. "anthropic/claude-sonnet-4.5").
+          // Worker may return the prefixed form (e.g. "inclusionai/ring-2.6-1t:free").
           // Strip the provider prefix for display — the slash-separated tail is
           // what users recognize.
           const display = c.model.includes('/') ? c.model.split('/').pop()! : c.model
