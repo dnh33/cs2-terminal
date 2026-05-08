@@ -20,6 +20,7 @@ import { Skeleton } from './components/primitives/Skeleton'
 const PoolIndexChart    = lazy(() => import('./components/charts/PoolIndexChart').then(m => ({ default: m.PoolIndexChart })))
 const VolumePriceScatter = lazy(() => import('./components/charts/VolumePriceScatter').then(m => ({ default: m.VolumePriceScatter })))
 import { MoversPanel } from './components/MoversPanel'
+import { MktTabs, type MktTabValue } from './components/MktTabs'
 import { LoginScreen } from './components/LoginScreen'
 import { SkipLink } from './components/primitives/SkipLink'
 import { ErrorBoundary } from './components/primitives/ErrorBoundary'
@@ -296,6 +297,18 @@ function AppDashboard({ onLogout }: DashboardProps) {
     const ageSec = Math.floor(Date.now() / 1000) - stats.last_snapshot_at
     return ageSec > 7200 ? 'STALE' : 'FRESH'
   })()
+  // Phase 4.5 Plan 2 — MKT tab persistence (cs-mkt-tab:v1)
+  const [mktTab, setMktTab] = useState<MktTabValue>(() => {
+    try {
+      const v = localStorage.getItem('cs-mkt-tab:v1')
+      return v === 'scan' || v === 'movers' ? v : 'scan'
+    } catch {
+      return 'scan'
+    }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('cs-mkt-tab:v1', mktTab) } catch { /* non-fatal */ }
+  }, [mktTab])
   // T8: dedicated App-level state for the PoolIndexChart. We intentionally do
   // NOT hoist MoversPanel's internal `days` state — keeping its fetch loop
   // self-contained minimizes blast radius (its tests, polish tests, and
@@ -897,11 +910,17 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
       return
     }
     if (item.id === 'panel:movers') {
-      document.querySelector('[data-test="movers-panel"]')?.scrollIntoView({ behavior: 'smooth' })
+      setMktTab('movers')
+      requestAnimationFrame(() => {
+        document.querySelector('[data-test="movers-panel"]')?.scrollIntoView({ behavior: 'smooth' })
+      })
       return
     }
     if (item.id === 'panel:scan') {
-      document.querySelector('[data-test="market-scan-panel"]')?.scrollIntoView({ behavior: 'smooth' })
+      setMktTab('scan')
+      requestAnimationFrame(() => {
+        document.querySelector('[data-test="market-scan-panel"]')?.scrollIntoView({ behavior: 'smooth' })
+      })
       return
     }
     if (item.id === 'panel:detail') {
@@ -1006,19 +1025,22 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
               <div data-test="mkt-region" className="flex border-b border-line">
                 <FrameGutter number="01" label="MKT" noBorder />
                 <div className="flex-1 min-w-0">
-                  <div data-test="market-scan-panel">
-                    <MarketScanPanel
-                      items={items}
-                      onScan={runScan}
-                      scan={scan}
-                      scanning={scanning}
-                      error={scanError}
-                      onSelectCase={(id) => setSelectedId(id, 'scan')}
-                    />
-                  </div>
-                  <div data-test="movers-panel">
-                    <MoversPanel onSelect={setSelectedId} earliestSnapshotAge={earliestSnapshotAge} />
-                  </div>
+                  <MktTabs
+                    value={mktTab}
+                    onChange={setMktTab}
+                    scan={{
+                      items,
+                      onScan: runScan,
+                      scan,
+                      scanning,
+                      error: scanError,
+                      onSelectCase: (id) => setSelectedId(id, 'scan'),
+                    }}
+                    movers={{
+                      onSelect: setSelectedId,
+                      earliestSnapshotAge,
+                    }}
+                  />
                 </div>
               </div>
 
