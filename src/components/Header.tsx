@@ -29,7 +29,7 @@ export function Header({ fetching, stats, onLogout, onOpenCmdK }: Props) {
   const ageLabel = ageSec == null ? '—' : formatAge(ageSec)
 
   return (
-    <header className="border-b border-line bg-bg-1 px-5 py-3 sticky top-0 z-50 backdrop-blur">
+    <header style={{ height: 'var(--header-h)' }} className="border-b border-line bg-bg-1 px-5 py-3 sticky top-0 z-50 backdrop-blur">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
           <StatusSigil status={status} lastCronTick={stats?.last_cron?.started_at} />
