@@ -56,7 +56,7 @@ function ScatterPoint({ d, cx, cy, selected, onSelect, onHover, onLeave, contain
   }
   const fill = colors[d.pool] ?? 'var(--ink-2)'
   const r = selected ? 10 : 8
-  const stroke = selected ? '#fff' : 'none'
+  const stroke = selected ? 'var(--on-accent)' : 'none'
   const sw = selected ? 1.5 : 0
   const handleEnter = (e: React.MouseEvent) => {
     // Tooltip position: convert viewport coords (clientX/Y) to container-relative

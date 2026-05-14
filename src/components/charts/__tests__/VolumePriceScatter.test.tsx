@@ -80,7 +80,7 @@ describe('VolumePriceScatter (SVG primitive)', () => {
     const { container } = render(<VolumePriceScatter items={items} onSelect={vi.fn()} selectedId="a" />)
     const circle = container.querySelector('svg[viewBox^="0 0 480"] circle[r="10"]')
     expect(circle).toBeTruthy()
-    expect(circle?.getAttribute('stroke')).toBe('#fff')
+    expect(circle?.getAttribute('stroke')).toBe('var(--on-accent)')
   })
 
   it('top-5 by volume: persistent labels rendered', () => {
