@@ -164,7 +164,7 @@ export function CmdK({ open, onClose, items, onActivate }: Props) {
   return (
     <div className="fixed inset-0 z-[200] flex items-start justify-center pt-24" role="presentation">
       <div className="absolute inset-0 bg-bg-0/60" onClick={onClose} aria-hidden="true" />
-      <div className="relative w-[min(560px,90vw)] bg-bg-1 border border-line shadow-xl">
+      <div className="relative w-[min(560px,90vw)] bg-bg-1 border border-line-bright bg-bg-2">
         <input
           ref={inputRef}
           role="combobox"

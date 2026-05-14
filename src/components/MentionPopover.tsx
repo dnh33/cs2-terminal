@@ -60,7 +60,7 @@ export function MentionPopover({ open, query, cases, onPick, onClose, anchor }: 
     : { position: 'absolute', bottom: '100%', left: 0, zIndex: 150 }
 
   return (
-    <div role="listbox" aria-label="Case suggestions" className="bg-bg-1 border border-line shadow-xl max-h-[200px] overflow-y-auto min-w-[240px]" style={style}>
+    <div role="listbox" aria-label="Case suggestions" className="bg-bg-1 border border-line-bright bg-bg-2 max-h-[200px] overflow-y-auto min-w-[240px]" style={style}>
       {filtered.map((c, i) => (
         <div
           key={c.id}
