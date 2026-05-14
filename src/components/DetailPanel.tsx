@@ -106,7 +106,7 @@ export function DetailPanel({
       {/* Header */}
       <div
         className="px-5 py-4 border-b border-line"
-        style={{ background: 'linear-gradient(180deg, rgba(255,116,33,0.04), transparent)' }}
+        style={{ background: 'rgb(var(--accent-sel-rgb) / 0.04)' }}
       >
         <div className="flex items-start justify-between gap-4">
           <div>

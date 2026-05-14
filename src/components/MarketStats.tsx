@@ -48,7 +48,7 @@ function BiggestMoverContent({ topMover }: { topMover: MoverRow | null | undefin
     return <span className="text-ink-3">—</span>
   }
   const sign = topMover.pct_change >= 0 ? '+' : ''
-  const color = topMover.pct_change >= 0 ? '#4ade80' : '#f87171'
+  const color = topMover.pct_change >= 0 ? 'var(--delta-up)' : 'var(--delta-dn)'
   return (
     <span style={{ color }} className="tabular-nums">
       {sign}{topMover.pct_change.toFixed(1)}%
@@ -108,7 +108,7 @@ export function MarketStats({ items, topMover }: { items: ItemWithPrice[]; topMo
         label="24H DOLLAR VOLUME"
         value={<NumberFlip value={stats.totalCap} formatter={(n) => `$${(n / 1000).toFixed(1)}K`} />}
         sub={<span className="tabular-nums tracking-[0.1em]">{delta24hPlaceholder}</span>}
-        accent="#4fd1c5"
+        accent="var(--accent-data)"
       />
       {/* SATELLITE 1 — BIGGEST MOVER 24H */}
       <StatBlock
@@ -122,7 +122,7 @@ export function MarketStats({ items, topMover }: { items: ItemWithPrice[]; topMo
         label="DISC / ACTIVE"
         value={<NumberFlip value={stats.ratio} suffix="×" decimals={1} />}
         sub={`$${stats.avgD.toFixed(2)} vs $${stats.avgA.toFixed(2)}`}
-        accent="#ff7421"
+        accent="var(--accent-sel)"
       />
       {/* SATELLITE 3 — CASES TRACKED */}
       <StatBlock
