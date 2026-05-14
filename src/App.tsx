@@ -50,6 +50,9 @@ import { computeFit, type FitResult } from './lib/fitScore'
 import { fetchItemMedians, type ItemMediansResponse } from './lib/itemMedians'
 import { runResolverPass } from './lib/hypothesisResolverPass'
 import { useDisplayedModel } from './lib/config'
+import { buildPctChangeMap } from './lib/ticker-pct-change'
+import { useTopMoverAnnounce } from './hooks/useTopMoverAnnounce'
+import { LiveRegion } from './components/primitives/LiveRegion'
 
 // Worker URL precedence mirrors src/lib/api.ts so telemetry POST hits the
 // same origin as the rest of the API.
@@ -320,6 +323,10 @@ function AppDashboard({ onLogout }: DashboardProps) {
   // drives the 30-day pool-index chart). undefined = loading; null = fetched
   // but no movers in window; MoverRow when present.
   const [topMover24h, setTopMover24h] = useState<import('./lib/api').MoverRow | null | undefined>(undefined)
+  // T4.b (ADR-002 sub-flavour B-24h) — retain full sorted 24h mover list so
+  // tickerRows can attach pct_change per name via buildPctChangeMap. Distinct
+  // from topMover24h (single top-1 slot) which feeds MarketStats hero block.
+  const [topMovers24hList, setTopMovers24hList] = useState<import('./lib/api').MoverRow[]>([])
   // T12 + Plan 5 T4: SystemStatus footer — 3-tier sparkline cluster
   // (case / item-high / item-low), refreshed every 60s. Each tier is fetched
   // independently via Promise.allSettled so one failing tier doesn't stall the
@@ -365,10 +372,12 @@ function AppDashboard({ onLogout }: DashboardProps) {
       .then((res) => {
         if (cancelled) return
         const sorted = res.movers.slice().sort((a, b) => Math.abs(b.pct_change) - Math.abs(a.pct_change))
+        setTopMovers24hList(sorted)
         setTopMover24h(sorted[0] ?? null)
       })
       .catch(() => {
         if (cancelled) return
+        setTopMovers24hList([])
         setTopMover24h(null)
       })
     return () => { cancelled = true }
@@ -780,6 +789,13 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
     }
   }
 
+  // T4.b — Map<name, pct_change> built from the full 24h sorted mover list
+  // so each ticker row can attach an arrow/colour cue without re-querying.
+  const pctChangeByName = useMemo(
+    () => buildPctChangeMap(topMovers24hList),
+    [topMovers24hList],
+  )
+
   const tickerRows = useMemo(
     () =>
       items
@@ -792,11 +808,17 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
             .toUpperCase(),
           price: i.price!.lowest,
           pool: i.pool,
+          pctChange: pctChangeByName.get(i.name) ?? undefined,
         })),
-    [items],
+    [items, pctChangeByName],
   )
 
   const hasPrice = items.some(i => i.price)
+
+  // F19 — announce-on-change message threaded into the polite LiveRegion
+  // beside the Ticker. Initial debounce 10s; Plan D NVDA calibration may
+  // re-tune.
+  const moverMessage = useTopMoverAnnounce(topMover24h, { debounceMs: 10_000 })
 
   // Earliest snapshot age (in seconds) across loaded items — feeds MoversPanel
   // 24H gating. T39 added the prop; T33 wires the value. NOTE: prop semantics
@@ -963,6 +985,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
       <div className="min-h-screen flex flex-col">
         <Header fetching={fetching} stats={stats} onLogout={onLogout} onOpenCmdK={() => setCmdkOpen(true)} />
         {hasPrice && <Ticker rows={tickerRows} />}
+        <LiveRegion politeness="polite" className="sr-only">{moverMessage}</LiveRegion>
         {hasPrice && <MarketStats items={items} topMover={topMover24h} />}
 
         <main id="main" className="flex-1">
