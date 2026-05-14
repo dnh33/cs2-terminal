@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react'
 import { LineSeries, type IChartApi } from 'lightweight-charts'
-import { LWChart, resolveToken } from './_shared'
+import { LWChart, resolveToken, HAIRLINE } from './_shared'
 import type { LWChartRef } from './_shared'
 import { normalizePoolSeries } from '../../lib/poolIndex'
 import type { PoolIndexRawPoint } from '../../lib/poolIndex'
@@ -41,9 +41,9 @@ export function PoolIndexChart({ poolIndex, days }: PoolIndexProps) {
 
   const onReady = (chart: IChartApi) => {
     // v5 unified API: addSeries(SeriesType, options)
-    const seriesDisc   = chart.addSeries(LineSeries, { color: resolveToken('--accent-sel'),  lineWidth: 2, title: 'DISC' })
-    const seriesRare   = chart.addSeries(LineSeries, { color: resolveToken('--accent-data'), lineWidth: 2, title: 'RARE' })
-    const seriesActive = chart.addSeries(LineSeries, { color: resolveToken('--ink-2'),       lineWidth: 1, title: 'ACTIVE' })
+    const seriesDisc   = chart.addSeries(LineSeries, { color: resolveToken('--accent-sel'),  lineWidth: HAIRLINE, title: 'DISC' })
+    const seriesRare   = chart.addSeries(LineSeries, { color: resolveToken('--accent-data'), lineWidth: HAIRLINE, title: 'RARE' })
+    const seriesActive = chart.addSeries(LineSeries, { color: resolveToken('--ink-2'),       lineWidth: HAIRLINE, title: 'ACTIVE' })
 
     const toLwc = (s: typeof normalized.DISC) =>
       s.map((p) => ({ time: Math.floor(p.snapshot_at) as import('lightweight-charts').UTCTimestamp, value: p.index }))

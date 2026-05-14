@@ -60,10 +60,10 @@ describe('PriceChart (LWC)', () => {
     addSeriesMock.mockClear()
   })
 
-  it('creates an LWC chart with area series for non-empty history', () => {
+  it('creates an LWC chart with a line series for non-empty history (Rule 9 — no gradient fills)', () => {
     render(<PriceChart item={makeItem()} />)
     expect(createChartMock).toHaveBeenCalledOnce()
-    expect(addSeriesMock).toHaveBeenCalledWith('AreaSeries', expect.any(Object))
+    expect(addSeriesMock).toHaveBeenCalledWith('LineSeries', expect.any(Object))
   })
 
   it('renders fallback when history is empty', () => {

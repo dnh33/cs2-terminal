@@ -1,7 +1,7 @@
 import { useRef, forwardRef, useImperativeHandle } from 'react'
 // LWC v5: AreaSeries is a named export passed to chart.addSeries(...)
-import { AreaSeries, type LineStyle, type IChartApi } from 'lightweight-charts'
-import { LWChart, resolveToken, withAlpha } from './_shared'
+import { LineSeries, type LineStyle, type IChartApi } from 'lightweight-charts'
+import { LWChart, resolveToken, HAIRLINE } from './_shared'
 import type { LWChartRef } from './_shared'
 import type { ItemFull } from '../CaseTable'
 
@@ -34,11 +34,11 @@ export const PriceChart = forwardRef<LWChartRef, { item: ItemFull }>(function Pr
   const onReady = (chart: IChartApi) => {
     const stroke = hasReal ? resolveToken('--accent-data') : resolveToken('--accent-sel')
     // v5 unified API: addSeries(SeriesType, options)
-    const series = chart.addSeries(AreaSeries, {
-      lineColor: stroke,
-      topColor: withAlpha(stroke, 0.16),
-      bottomColor: withAlpha(stroke, 0),
-      lineWidth: 2,
+    const series = chart.addSeries(LineSeries, {
+      color: stroke,
+      lineWidth: HAIRLINE,
+      priceLineVisible: false,
+      lastValueVisible: false,
       priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
     })
     chartRef.current?.setMainSeries(series)
