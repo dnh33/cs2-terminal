@@ -4,6 +4,7 @@ import { LineSeries, type LineStyle, type IChartApi } from 'lightweight-charts'
 import { LWChart, resolveToken, HAIRLINE } from './_shared'
 import type { LWChartRef } from './_shared'
 import type { ItemFull } from '../CaseTable'
+import { summarizeTrend, captionFromHistory } from '../../lib/trend-summary'
 
 export const PriceChart = forwardRef<LWChartRef, { item: ItemFull }>(function PriceChart(
   { item },
@@ -27,9 +28,15 @@ export const PriceChart = forwardRef<LWChartRef, { item: ItemFull }>(function Pr
     )
   }
   const hasReal = item.history.some(h => h.source === 'real')
-  const first = item.history[0]?.price
-  const last = item.history[item.history.length - 1]?.price
-  const summary = `Price history for ${item.name}: ${item.history.length} points, from $${first?.toFixed(2) ?? '—'} to $${last?.toFixed(2) ?? '—'}`
+  const history = item.history
+  // F18: trend-summary supplies shape signal (direction, drawdown, breakeven
+  // cross) — replacing the prior "N points, $A to $B" framing that lost the
+  // shape of the curve. If the item carries no break-even, pass Infinity so
+  // the breakeven-cross branch stays dormant.
+  const breakEven = item.metrics?.breakeven ?? Infinity
+  const trend = summarizeTrend(history, { breakEven })
+  const summary = `Price history for ${item.name}: ${trend}`
+  const caption = captionFromHistory(history)
 
   const onReady = (chart: IChartApi) => {
     const stroke = hasReal ? resolveToken('--accent-data') : resolveToken('--accent-sel')
@@ -61,11 +68,21 @@ export const PriceChart = forwardRef<LWChartRef, { item: ItemFull }>(function Pr
   }
 
   return (
-    <LWChart
-      ref={chartRef}
-      height={240}
-      ariaLabel={summary}
-      onReady={onReady}
-    />
+    <>
+      <LWChart
+        ref={chartRef}
+        height={240}
+        ariaLabel={summary}
+        onReady={onReady}
+      />
+      {/* F18: off-screen trend summary for screen readers — recovers the shape
+          signal (direction, drawdown, breakeven cross) the visual axis omits. */}
+      <span className="sr-only">{trend}</span>
+      {/* F8: date-anchored caption replaces relative "LAST 7 DAYS" framing and
+          flags thin-data windows (< 14 days) honestly. */}
+      <div className="mt-2 text-[10px] tracking-[0.15em] text-ink-3 font-mono">
+        {caption}
+      </div>
+    </>
   )
 })

@@ -72,10 +72,20 @@ describe('PriceChart (LWC)', () => {
     expect(createChartMock).not.toHaveBeenCalled()
   })
 
-  it('exposes ARIA summary on wrapper', () => {
+  it('exposes ARIA summary on wrapper (F18: trend-shape signal)', () => {
     const { getByRole } = render(<PriceChart item={makeItem()} />)
     const img = getByRole('img')
-    expect(img.getAttribute('aria-label')).toContain('Glove Case')
-    expect(img.getAttribute('aria-label')).toContain('3 points')
+    const label = img.getAttribute('aria-label') ?? ''
+    expect(label).toContain('Glove Case')
+    // Post-F18 the aria-label carries trend shape, not raw point count.
+    // History rises 240 → 247 (~3%) over 2 days; breakeven (290) never crossed.
+    expect(label).toMatch(/ris|fall|flat/i)
+    expect(label).toMatch(/days/i)
+  })
+
+  it('renders date-anchored caption (F8) with thin-data flag for < 14d span', () => {
+    const { getByText } = render(<PriceChart item={makeItem()} />)
+    expect(getByText(/\/\/ SINCE 2024-05-06/)).toBeTruthy()
+    expect(getByText(/thin data \(3 pts\)/)).toBeTruthy()
   })
 })
