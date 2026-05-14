@@ -1008,7 +1008,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
                 onClick={() => fetchAll(true)}
                 disabled={fetching}
                 data-variant="primary"
-                className="text-[12px] tracking-[0.2em] px-6 py-3.5 bg-accent-sel text-on-accent font-bold disabled:opacity-50"
+                className="text-[12px] tracking-[0.2em] px-6 py-3.5 bg-accent-sel text-on-accent font-bold disabled:opacity-50 disabled:text-ink-0"
               >
                 {fetching ? '◌ FETCHING...' : '▸ LIVE — STEAM MARKET'}
               </button>
@@ -1187,7 +1187,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
                 type="button"
                 onClick={() => fetchAll(true)}
                 disabled={fetching}
-                className="text-[9px] tracking-[0.15em] px-2.5 py-1 text-accent-data border border-accent-data bg-transparent disabled:opacity-50"
+                className="text-[9px] tracking-[0.15em] px-2.5 py-1 text-accent-data border border-accent-data bg-transparent disabled:opacity-50 disabled:text-ink-0"
               >
                 {fetching ? '◌ SYNCING' : '↻ REFRESH'}
               </button>
