@@ -130,11 +130,24 @@ export function NumberFlip({
   return (
     <span
       ref={wrapperRef}
-      className={`num-flip tabular-nums ${className}`}
+      className={`num-flip tabular-nums relative ${className}`}
       data-flash={flash ?? undefined}
       aria-label={!isValid ? undefined : formatted}
     >
       {children}
+      {flash && (
+        <span
+          aria-hidden="true"
+          className="absolute text-[8px] leading-none pointer-events-none"
+          style={{
+            top: '-2px',
+            right: '-10px',
+            color: flash === 'up' ? 'var(--delta-up)' : 'var(--delta-dn)',
+          }}
+        >
+          {flash === 'up' ? '▲' : '▼'}
+        </span>
+      )}
     </span>
   )
 }

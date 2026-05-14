@@ -47,10 +47,12 @@ function BiggestMoverContent({ topMover }: { topMover: MoverRow | null | undefin
   if (topMover === null) {
     return <span className="text-ink-3">—</span>
   }
-  const sign = topMover.pct_change >= 0 ? '+' : ''
-  const color = topMover.pct_change >= 0 ? 'var(--delta-up)' : 'var(--delta-dn)'
+  const up = topMover.pct_change >= 0
+  const sign = up ? '+' : ''
+  const color = up ? 'var(--delta-up)' : 'var(--delta-dn)'
   return (
     <span style={{ color }} className="tabular-nums">
+      <span aria-hidden="true" className="mr-1">{up ? '▲' : '▼'}</span>
       {sign}{topMover.pct_change.toFixed(1)}%
     </span>
   )

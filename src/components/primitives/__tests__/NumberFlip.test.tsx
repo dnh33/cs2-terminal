@@ -67,15 +67,20 @@ describe('NumberFlip', () => {
     expect(container.textContent).toContain('5.5%')
   })
 
+  // Selector targets DigitColumn specifically (it owns overflow-hidden) so the
+  // flash-direction glyph (F16, aria-hidden but absolutely positioned) doesn't
+  // count as a digit column.
+  const DIGIT_COL = '[aria-hidden="true"].overflow-hidden'
+
   it('does NOT render DigitColumn on initial mount (no animation on first render)', () => {
     const { container } = render(<NumberFlip value={247.50} prefix="$" />)
-    expect(container.querySelectorAll('[aria-hidden="true"]').length).toBe(0)
+    expect(container.querySelectorAll(DIGIT_COL).length).toBe(0)
   })
 
   it('renders DigitColumn for each changed digit position on value change', () => {
     const { container, rerender } = render(<NumberFlip value={247.50} prefix="$" />)
     rerender(<NumberFlip value={247.80} prefix="$" />)
-    const columns = container.querySelectorAll('[aria-hidden="true"]')
+    const columns = container.querySelectorAll(DIGIT_COL)
     expect(columns.length).toBe(1)
     expect(columns[0].textContent).toContain('5')
     expect(columns[0].textContent).toContain('8')
@@ -84,14 +89,14 @@ describe('NumberFlip', () => {
   it('keeps prefix, suffix, and decimal point static (never animated)', () => {
     const { container, rerender } = render(<NumberFlip value={1} prefix="$" suffix="%" decimals={2} />)
     rerender(<NumberFlip value={2} prefix="$" suffix="%" decimals={2} />)
-    const columns = container.querySelectorAll('[aria-hidden="true"]')
+    const columns = container.querySelectorAll(DIGIT_COL)
     expect(columns.length).toBe(1)
   })
 
   it('skips slide on length mismatch (e.g. 99 → 100)', () => {
     const { container, rerender } = render(<NumberFlip value={99} decimals={0} />)
     rerender(<NumberFlip value={100} decimals={0} />)
-    const columns = container.querySelectorAll('[aria-hidden="true"]')
+    const columns = container.querySelectorAll(DIGIT_COL)
     expect(columns.length).toBe(0)
     expect(container.textContent).toContain('100')
   })
@@ -105,6 +110,6 @@ describe('NumberFlip', () => {
   it('slideDigits={false} disables per-digit slide', () => {
     const { container, rerender } = render(<NumberFlip value={1} slideDigits={false} decimals={0} />)
     rerender(<NumberFlip value={2} slideDigits={false} decimals={0} />)
-    expect(container.querySelectorAll('[aria-hidden="true"]').length).toBe(0)
+    expect(container.querySelectorAll(DIGIT_COL).length).toBe(0)
   })
 })
