@@ -33,7 +33,7 @@
   --ink-0-rgb: 233 237 243;--ink-0: #e9edf3;
   --ink-1-rgb: 170 179 191;--ink-1: #aab3bf;
   --ink-2-rgb: 126 138 153;--ink-2: #7e8a99;
-  --ink-3-rgb: 84 95 114;  --ink-3: #545f72;
+  --ink-3-rgb: 122 133 151; --ink-3: #7a8597;
 
   /* Selection accent */
   --accent-sel-rgb: 232 104 26;     --accent-sel: #e8681a;
@@ -118,13 +118,13 @@
   --line-hi-rgb: 61 52 0;      --line-hi: #3d3400;
   --ink-0-rgb: 245 200 66;     --ink-0: #f5c842;
   --ink-1-rgb: 196 156 42;     --ink-1: #c49c2a;
-  --ink-2-rgb: 160 124 24;     --ink-2: #a07c18;
-  --ink-3-rgb: 124 90 16;      --ink-3: #7c5a10;
+  --ink-2-rgb: 196 158 60;     --ink-2: #c49e3c;
+  --ink-3-rgb: 184 154 79;     --ink-3: #b89a4f;
   --accent-sel-rgb: 255 179 0; --accent-sel: #ffb300;
   --accent-sel-dim-rgb: 204 143 0; --accent-sel-dim: #cc8f00;
   --accent-data-rgb: 245 200 66;   --accent-data: #f5c842;
   --delta-up-rgb: 245 200 66;      --delta-up: #f5c842;
-  --delta-dn-rgb: 160 124 24;      --delta-dn: #a07c18;
+  --delta-dn-rgb: 208 90 58;       --delta-dn: #d05a3a;
   --state-warn-rgb: 245 200 66;    --state-warn: #f5c842;
   --state-err-rgb: 245 200 66;     --state-err: #f5c842;
   --state-info-rgb: 245 200 66;    --state-info: #f5c842;
@@ -144,13 +144,13 @@
   --line-hi-rgb: 31 63 31;     --line-hi: #1f3f1f;
   --ink-0-rgb: 57 226 57;      --ink-0: #39e239;
   --ink-1-rgb: 38 168 38;      --ink-1: #26a826;
-  --ink-2-rgb: 30 138 30;      --ink-2: #1e8a1e;
-  --ink-3-rgb: 26 110 26;      --ink-3: #1a6e1a;
+  --ink-2-rgb: 64 198 64;      --ink-2: #40c640;
+  --ink-3-rgb: 38 168 38;      --ink-3: #26a826;
   --accent-sel-rgb: 111 255 111;   --accent-sel: #6fff6f;
   --accent-sel-dim-rgb: 63 212 63; --accent-sel-dim: #3fd43f;
   --accent-data-rgb: 57 226 57;    --accent-data: #39e239;
   --delta-up-rgb: 57 226 57;       --delta-up: #39e239;
-  --delta-dn-rgb: 30 138 30;       --delta-dn: #1e8a1e;
+  --delta-dn-rgb: 194 86 86;       --delta-dn: #c25656;
   --state-warn-rgb: 57 226 57;     --state-warn: #39e239;
   --state-err-rgb: 57 226 57;      --state-err: #39e239;
   --state-info-rgb: 57 226 57;     --state-info: #39e239;
