@@ -5,6 +5,8 @@ import type { PriceData } from '../lib/metrics'
 import type { MoverRow } from '../lib/api'
 import { Skeleton } from './primitives/Skeleton'
 import { NumberFlip } from './primitives/NumberFlip'
+import { LiveRegion } from './primitives/LiveRegion'
+import { useHeroAnnounce } from '../hooks/useHeroAnnounce'
 
 export interface ItemWithPrice extends CaseRecord {
   price: PriceData | null
@@ -77,6 +79,14 @@ export function MarketStats({ items, topMover }: { items: ItemWithPrice[]; topMo
     }
   }, [items])
 
+  // F17 (ADR-003): one polite HERO-level LiveRegion summarises material
+  // changes. Per-cell aria-live avoided — utterance flood. Calibration
+  // numbers live in hero-announce-config.ts (single source of truth).
+  const heroMessage = useHeroAnnounce({
+    dollarVolume24h: stats?.totalCap ?? null,
+    biggestMover: topMover ?? null,
+  })
+
   if (!stats) {
     // Skeleton: 4 cards (dominant + 3 satellites). Plan 1 reduces from 5 to 4.
     return (
@@ -132,6 +142,7 @@ export function MarketStats({ items, topMover }: { items: ItemWithPrice[]; topMo
         value={<NumberFlip value={stats.tracked} decimals={0} flashOnChange={false} />}
         sub={`of ${CASE_DB.length} in DB`}
       />
+      <LiveRegion politeness="polite" className="sr-only">{heroMessage}</LiveRegion>
     </div>
   )
 }

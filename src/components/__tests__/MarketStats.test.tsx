@@ -36,15 +36,21 @@ describe('MarketStats HERO STRIP (Phase 4.5 Plan 1)', () => {
   it('renders 24H DOLLAR VOLUME as the dominant block (NOT DAILY MARKET CAP)', () => {
     const { container } = render(<MarketStats items={[priced]} topMover={topMover} />)
     expect(screen.queryByText(/DAILY MARKET CAP/)).toBeNull()
-    expect(screen.getByText(/24H DOLLAR VOLUME/)).toBeTruthy()
-    expect(container.querySelector('[data-test="hero-dominant"]')).not.toBeNull()
+    // Scope to the dominant StatBlock — the HERO LiveRegion (T6.a) also
+    // contains the phrase in its summary message.
+    const hero = container.querySelector('[data-test="hero-dominant"]')
+    expect(hero).not.toBeNull()
+    expect(hero?.textContent).toMatch(/24H DOLLAR VOLUME/)
   })
 
   it('renders BIGGEST MOVER 24H satellite with the top mover name and pct_change', () => {
     const { container } = render(<MarketStats items={[priced]} topMover={topMover} />)
     expect(screen.getByText(/BIGGEST MOVER 24H/)).toBeTruthy()
-    expect(screen.getByText(/Spectrum Case/)).toBeTruthy()
-    expect(container.textContent).toMatch(/\+20\.0%/)
+    // Scope to the satellite — the HERO LiveRegion (T6.a) also mentions the name.
+    const mover = container.querySelector('[data-test="hero-mover"]')
+    expect(mover).not.toBeNull()
+    expect(mover?.textContent).toMatch(/Spectrum Case/)
+    expect(mover?.textContent).toMatch(/\+20\.0%/)
   })
 
   it('does NOT render HIGHEST PRICE or 24H VOLUME (units) blocks', () => {
