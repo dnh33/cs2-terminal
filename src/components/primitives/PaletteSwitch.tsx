@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
-type Mode = 'std' | 'amber' | 'green'
+const PALETTES = ['std', 'amber', 'green'] as const
+type Mode = typeof PALETTES[number]
 const STORAGE_KEY = 'cs-palette'
 const MODES: { id: Mode; label: string }[] = [
   { id: 'std',   label: 'STD' },
@@ -22,6 +23,18 @@ export function PaletteSwitch() {
     try { localStorage.setItem(STORAGE_KEY, mode) } catch {}
   }, [mode])
 
+  const currentIndex = PALETTES.indexOf(mode)
+
+  function handleKey(e: React.KeyboardEvent<HTMLButtonElement>) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault()
+      setMode(PALETTES[(currentIndex + 1) % PALETTES.length])
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      setMode(PALETTES[(currentIndex - 1 + PALETTES.length) % PALETTES.length])
+    }
+  }
+
   return (
     <div role="radiogroup" aria-label="Palette mode" className="inline-flex border border-line">
       {MODES.map(m => (
@@ -30,6 +43,8 @@ export function PaletteSwitch() {
           role="radio"
           aria-checked={mode === m.id}
           aria-label={m.label}
+          tabIndex={mode === m.id ? 0 : -1}
+          onKeyDown={handleKey}
           onClick={() => setMode(m.id)}
           className={[
             'px-3 py-1 text-[10px] tracking-[0.15em] uppercase border-r border-line last:border-r-0',
