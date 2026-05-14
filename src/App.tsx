@@ -1176,6 +1176,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
               type="button"
               data-test="footer-disclaimer-trigger"
               aria-expanded={disclaimerOpen}
+              aria-controls="footer-disclaimer-content"
               onClick={() => setDisclaimerOpen((v) => !v)}
               className="bg-transparent text-ink-2 hover:text-ink-1 p-0 m-0 cursor-pointer"
             >
@@ -1194,7 +1195,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
           </div>
 
           {disclaimerOpen && (
-            <div data-test="footer-disclaimer-content" className="px-6 pb-3 text-[10px] text-ink-2 leading-[1.6]">
+            <div id="footer-disclaimer-content" data-test="footer-disclaimer-content" className="px-6 pb-3 text-[10px] text-ink-2 leading-[1.6]">
               Analytical tool, not investment advice. Steam Market prices via your Cloudflare Worker proxy, stored in D1. CS2 case prices are highly speculative; Valve can change drop pool status at any time. Steam takes 15% on resale.
             </div>
           )}
