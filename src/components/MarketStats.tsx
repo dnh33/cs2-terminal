@@ -33,7 +33,7 @@ function StatBlock({
   const numClass = dominant ? 'text-[44px]' : 'text-[28px]'
   return (
     <div data-test={dataTest} className={`px-4 py-3.5 border-r border-line ${flexClass}`}>
-      <div className="text-[9px] tracking-[0.2em] text-ink-2 mb-1.5">{label}</div>
+      <div className="text-[10px] tracking-[0.2em] text-ink-2 mb-1.5">{label}</div>
       <div className={`font-display ${numClass} tracking-[0.02em] leading-none`} style={{ color: accent || 'var(--text-0)' }}>
         {value}
       </div>

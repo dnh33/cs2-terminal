@@ -110,7 +110,7 @@ export function DetailPanel({
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[9px] tracking-[0.2em] text-ink-2 mb-1.5 m-0">// SELECTED INSTRUMENT</p>
+            <p className="text-[10px] tracking-[0.2em] text-ink-2 mb-1.5 m-0">// SELECTED INSTRUMENT</p>
             <h2 className="font-display text-[28px] tracking-[0.02em] leading-none text-ink-0 m-0">
               {item.name.toUpperCase()}
             </h2>
@@ -132,7 +132,7 @@ export function DetailPanel({
         && currentSnapshotAt != null
         && scanSnapshotAt === currentSnapshotAt && (
         <div className="px-5 py-2 border-b border-line bg-accent-data/[0.04] text-[11px] text-accent-data flex items-center gap-2">
-          <span className="font-bold tracking-[0.15em] text-[9px] shrink-0">↳ FROM THIS SCAN</span>
+          <span className="font-bold tracking-[0.15em] text-[10px] shrink-0">↳ FROM THIS SCAN</span>
         </div>
       )}
 
@@ -140,7 +140,7 @@ export function DetailPanel({
       {p && (
         <div className="grid grid-cols-3 border-b border-line">
           <div className="px-5 py-3.5 border-r border-line">
-            <div className="text-[9px] tracking-[0.2em] text-ink-2">LOWEST ASK</div>
+            <div className="text-[10px] tracking-[0.2em] text-ink-2">LOWEST ASK</div>
             <div className="font-display text-[28px] text-accent-sel leading-tight">
               <NumberFlip value={p.lowest} prefix="$" decimals={2} />
             </div>
@@ -149,14 +149,14 @@ export function DetailPanel({
             </div>
           </div>
           <div className="px-5 py-3.5 border-r border-line">
-            <div className="text-[9px] tracking-[0.2em] text-ink-2">24H VOLUME</div>
+            <div className="text-[10px] tracking-[0.2em] text-ink-2">24H VOLUME</div>
             <div className="font-display text-[28px] text-accent-data leading-tight">
               <NumberFlip value={p.volume} formatter={(n) => n.toLocaleString('en-US')} />
             </div>
             <div className="text-[10px] text-ink-2">units sold</div>
           </div>
           <div className="px-5 py-3.5">
-            <div className="text-[9px] tracking-[0.2em] text-ink-2">BREAK-EVEN</div>
+            <div className="text-[10px] tracking-[0.2em] text-ink-2">BREAK-EVEN</div>
             <div className="font-display text-[28px] text-ink-0 leading-tight">
               <NumberFlip value={m?.breakeven || 0} prefix="$" decimals={2} />
             </div>
@@ -183,7 +183,7 @@ export function DetailPanel({
       <div className="px-5 py-4 border-b border-line">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-[10px] tracking-[0.2em] text-ink-1 font-semibold m-0">// PRICE TRAJECTORY</h3>
-          <span className="text-[9px] text-ink-3">
+          <span className="text-[10px] text-ink-3">
             {item.history.some((h) => h.source === 'real') ? 'real history from worker' : 'modeled from current px'}
           </span>
         </div>
@@ -211,7 +211,7 @@ export function DetailPanel({
             {divergence?.status === 'override' && (
               <span
                 title={divergence.reason}
-                className="text-[9px] tracking-[0.2em] font-bold px-2 py-0.5 border text-state-warn border-state-warn"
+                className="text-[10px] tracking-[0.2em] font-bold px-2 py-0.5 border text-state-warn border-state-warn"
               >
                 MODEL OVERRIDE
               </span>
@@ -219,7 +219,7 @@ export function DetailPanel({
             {divergence?.status === 'block' && (
               <span
                 title={divergence.reason}
-                className="text-[9px] tracking-[0.2em] font-bold px-2 py-0.5 border text-state-err border-state-err"
+                className="text-[10px] tracking-[0.2em] font-bold px-2 py-0.5 border text-state-err border-state-err"
               >
                 WE DON'T KNOW
               </span>
