@@ -9,9 +9,13 @@ export function resolveToken(name: string): string {
 }
 
 function buildChartOptions(): DeepPartial<ChartOptions> {
+  // no-hex-disable-next-line — token fallback when CSS var unresolved
   const bg = resolveToken('--bg-1') || '#0a0e14'
+  // no-hex-disable-next-line — token fallback when CSS var unresolved
   const text = resolveToken('--ink-1') || '#c5cad1'
+  // no-hex-disable-next-line — token fallback when CSS var unresolved
   const line = resolveToken('--line') || '#232932'
+  // no-hex-disable-next-line — token fallback when CSS var unresolved
   const accent = resolveToken('--accent-sel') || '#ff7421'
   return {
     layout: {
