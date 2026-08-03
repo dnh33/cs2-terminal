@@ -189,7 +189,16 @@ export function DetailPanel({
         </div>
         <div className="relative">
           <Suspense fallback={<Skeleton width="100%" height={240} />}>
-            <PriceChart item={item} ref={chartRef} />
+            {/* key={item.id}: LWChart creates its chart + calls series.setData
+                exactly once, in a mount-effect with an empty dep array (by
+                design — palette/resize are handled separately via its own
+                MutationObserver/ResizeObserver, not React re-renders). Without
+                a key tied to the selected case, switching the market-table
+                selection updates every text/label around the chart (all
+                computed fresh per render) but leaves the canvas itself frozen
+                on whichever case was selected first. Forcing a remount per
+                case is what actually re-runs onReady with fresh data. */}
+            <PriceChart item={item} ref={chartRef} key={item.id} />
           </Suspense>
           <Reticle item={item} chartRef={chartRef} peers={reticlePeers ?? []} />
         </div>
