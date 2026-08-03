@@ -415,6 +415,20 @@ function AppDashboard({ onLogout }: DashboardProps) {
     }
   }, [selectedId, lastUpdated, selected?.name, loadRealHistory])
 
+  // Load real history for every visible row on data load, not just the
+  // selected one — the market table's TREND sparklines were previously stuck
+  // on modeled/synthetic data until a user clicked a row (which only ever
+  // hydrated that single case). Keyed on `lastUpdated` only (not `items`) so
+  // this fires once per successful fetchAll cycle instead of looping forever
+  // as loadRealHistory's own setItems calls change `items` identity.
+  useEffect(() => {
+    if (!lastUpdated) return
+    const pending = items.filter(i => !i.history?.some(h => h.source === 'real'))
+    if (pending.length === 0) return
+    void Promise.all(pending.map(i => loadRealHistory(i.name, 30)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastUpdated])
+
   useEffect(() => {
     setAnalysis(null)
     setAnalysisError(null)

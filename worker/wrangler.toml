@@ -26,7 +26,7 @@ STEAM_REQUEST_SPACING_MS = "4000"
 # `:free` suffix = OpenRouter free-tier — typically tens-to-low-hundreds
 # requests/day per key, separate from any paid quota. If usage exceeds the
 # window, swap to a paid model id and redeploy.
-OPENROUTER_MODEL = "inclusionai/ring-2.6-1t:free"
+OPENROUTER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 
 # Embedding model — used by /embeddings for sqlite-vec / semantic search.
 # Browse: https://openrouter.ai/models?fmt=cards&output_modalities=embeddings
