@@ -185,13 +185,23 @@ export async function fetchHistory(name: string, days = 30): Promise<PricePoint[
   const data = await jsonGet<{ history: HistoryRow[] }>(
     `/history?name=${encodeURIComponent(name)}&days=${days}`,
   )
-  return data.history
+  // The cron samples multiple times per day (hourly + 3-hourly + twice-daily
+  // triggers), but the chart is a daily view. Collapsing fetched_at down to
+  // a bare date string previously left same-day rows on an identical
+  // timestamp once PriceChart converted them back to seconds — lightweight-
+  // charts requires strictly-ascending unique times and threw on the
+  // duplicate. Sort by fetched_at first (API doesn't guarantee order across
+  // all callers), then keep only the last snapshot of each day.
+  const sorted = data.history
     .filter(h => h.lowest != null)
-    .map(h => ({
-      date: new Date(h.fetched_at * 1000).toISOString().slice(0, 10),
-      price: h.lowest as number,
-      source: 'real' as const,
-    }))
+    .sort((a, b) => a.fetched_at - b.fetched_at)
+
+  const byDate = new Map<string, PricePoint>()
+  for (const h of sorted) {
+    const date = new Date(h.fetched_at * 1000).toISOString().slice(0, 10)
+    byDate.set(date, { date, price: h.lowest as number, source: 'real' })
+  }
+  return Array.from(byDate.values())
 }
 
 export interface MoversResponse {
