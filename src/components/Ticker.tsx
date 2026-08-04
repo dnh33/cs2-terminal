@@ -16,6 +16,11 @@ const POOL_COLOR: Record<Pool, string> = {
 
 export function Ticker({ rows }: { rows: TickerRow[] }) {
   if (!rows || rows.length === 0) return null
+  // Unconditional double, not width-aware. Fine at the current case count
+  // (~41 cases → content ≈8.9x the container width — see
+  // docs/superpowers/specs/notes/F1-ticker-diagnosis.md), but if the
+  // tracked case count ever dropped low enough the strip could stop
+  // overflowing the container and the drift would visibly loop/snap.
   const display = [...rows, ...rows]
   return (
     <div
