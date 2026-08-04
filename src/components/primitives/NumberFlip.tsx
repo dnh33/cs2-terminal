@@ -24,8 +24,18 @@ const DIGIT_RE = /[0-9]/
 function DigitColumn({ from, to }: { from: string; to: string }) {
   const [animated, setAnimated] = useState(false)
   useLayoutEffect(() => {
-    const id = requestAnimationFrame(() => setAnimated(true))
-    return () => cancelAnimationFrame(id)
+    // Double rAF: a single rAF sometimes fires before the browser has
+    // painted the untransformed "from" state, so the transition collapses
+    // and the digit snaps instead of sliding. Two frames guarantee a paint
+    // happens between mount and the flip.
+    let inner = 0
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setAnimated(true))
+    })
+    return () => {
+      cancelAnimationFrame(outer)
+      cancelAnimationFrame(inner)
+    }
   }, [])
   return (
     <span
@@ -100,20 +110,32 @@ export function NumberFlip({
   // P2-1 audit fix: scope the clear to our own flash keyframes. DigitColumn uses CSS *transition*,
   // not animation, so its events won't bubble here — but filter by name defensively.
   // Use a native listener (React 19 synthetic delegation for animationend has gaps in jsdom).
+  //
+  // Verified live (rapid ROI-calculator edits driving repeated value changes): under load,
+  // animationend can be missed entirely — not just on same-element re-triggers, but seemingly
+  // whenever enough re-renders land in one burst — leaving data-flash stuck permanently (tinted
+  // background + arrow glyph never clears). This was the reported "borked/lagging" number
+  // animation. The setTimeout backstop guarantees cleanup regardless of whether the browser
+  // ever fires the event; re-keying the effect on `flash` gives every new flash its own timer.
   const wrapperRef = useRef<HTMLSpanElement | null>(null)
   useEffect(() => {
+    if (!flash) return
     const el = wrapperRef.current
-    if (!el) return
+    const clear = () => {
+      setFlash(null)
+      setSlideFrom(null)
+    }
     const onEnd = (e: Event) => {
       const name = (e as AnimationEvent).animationName
-      if (!name || name === 'flash-up' || name === 'flash-down') {
-        setFlash(null)
-        setSlideFrom(null)
-      }
+      if (!name || name === 'flash-up' || name === 'flash-down') clear()
     }
-    el.addEventListener('animationend', onEnd)
-    return () => el.removeEventListener('animationend', onEnd)
-  }, [])
+    el?.addEventListener('animationend', onEnd)
+    const fallback = setTimeout(clear, 900)
+    return () => {
+      el?.removeEventListener('animationend', onEnd)
+      clearTimeout(fallback)
+    }
+  }, [flash])
 
   const shouldSlide = slideDigits && slideFrom !== null && slideFrom.length === formatted.length && slideFrom !== formatted
 

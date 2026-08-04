@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, act } from '@testing-library/react'
 import { NumberFlip } from '../NumberFlip'
 
@@ -111,5 +111,39 @@ describe('NumberFlip', () => {
     const { container, rerender } = render(<NumberFlip value={1} slideDigits={false} decimals={0} />)
     rerender(<NumberFlip value={2} slideDigits={false} decimals={0} />)
     expect(container.querySelectorAll(DIGIT_COL).length).toBe(0)
+  })
+
+  // Bug report: "the number update animation is completely borked... it like
+  // lags or something." Root cause reproduced live (rapid ROI-calculator
+  // edits) — under load, animationend is sometimes never dispatched at all,
+  // which with the old animationend-only cleanup left data-flash (tinted
+  // background + arrow glyph) stuck permanently. These tests never dispatch
+  // animationend, simulating the missed-event case directly.
+  describe('cleanup backstop when animationend never fires (the reported bug)', () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => vi.useRealTimers())
+
+    it('clears data-flash via the timeout backstop', () => {
+      const { container, rerender } = render(<NumberFlip value={100} />)
+      rerender(<NumberFlip value={120} />)
+      const wrapper = container.querySelector('.num-flip') as HTMLElement
+      expect(wrapper.getAttribute('data-flash')).toBe('up')
+      // No animationend dispatched — this is the missed-event scenario.
+      act(() => { vi.advanceTimersByTime(900) })
+      expect(wrapper.getAttribute('data-flash')).toBeNull()
+    })
+
+    it('does not get permanently stuck across a rapid burst of value changes', () => {
+      const { container, rerender } = render(<NumberFlip value={100} />)
+      // Simulate several updates landing faster than the flash can resolve —
+      // none of them ever dispatch animationend.
+      for (const v of [150, 100, 200, 120, 180]) {
+        rerender(<NumberFlip value={v} />)
+      }
+      const wrapper = container.querySelector('.num-flip') as HTMLElement
+      expect(wrapper.getAttribute('data-flash')).not.toBeNull()
+      act(() => { vi.advanceTimersByTime(900) })
+      expect(wrapper.getAttribute('data-flash')).toBeNull()
+    })
   })
 })
