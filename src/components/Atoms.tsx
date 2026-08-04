@@ -17,7 +17,7 @@ export function StatusDot({ color = C.green, pulse = false }: { color?: string; 
   )
 }
 
-export function PoolBadge({ pool }: { pool: Pool }) {
+export function PoolBadge({ pool, className = '' }: { pool: Pool; className?: string }) {
   const cfg = {
     active:       { color: C.green,  label: 'ACTIVE', bg: 'rgba(74,222,128,0.08)' },
     rare:         { color: C.cyan,   label: 'RARE',   bg: 'rgba(79,209,197,0.08)' },
@@ -25,7 +25,7 @@ export function PoolBadge({ pool }: { pool: Pool }) {
   }[pool]
   return (
     <span
-      className="text-[9px] tracking-[0.15em] font-semibold px-1.5 py-px"
+      className={`text-[9px] tracking-[0.15em] font-semibold px-1.5 py-px ${className}`}
       style={{ color: cfg.color, border: `1px solid ${cfg.color}`, background: cfg.bg }}
     >
       {cfg.label}

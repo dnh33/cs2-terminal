@@ -98,3 +98,36 @@ describe('CaseTable a11y + keyboard', () => {
     expect(name).toHaveAttribute('aria-sort', 'none')
   })
 })
+
+describe('CaseTable desktop grid pool badge spacing', () => {
+  const noop = () => {}
+  it('pool badge does not stretch to fill its grid cell (leaves a gap before LOWEST)', () => {
+    const { container } = render(
+      <CaseTable
+        items={[baseItem]}
+        selectedId={null}
+        onSelect={noop}
+        sort={{ key: 'price', dir: 'desc' }}
+        setSort={noop as any}
+        filter="all"
+        setFilter={noop}
+      />
+    )
+    // Desktop grid row's PoolBadge — grid items stretch to fill their cell by
+    // default (CSS Grid justify-items: stretch), which left the badge's
+    // right edge touching LOWEST's left edge with zero gap. justify-self-start
+    // keeps the badge at its natural content width.
+    // .hidden.md:grid matches both the header row and the data row — the
+    // header comes first in document order, so scope to the data row (the
+    // one that actually contains a price) rather than querySelector's
+    // first match.
+    const grids = Array.from(container.querySelectorAll('.hidden.md\\:grid'))
+    const dataRow = grids.find(g => /\$/.test(g.textContent || ''))
+    expect(dataRow).not.toBeUndefined()
+    // Grid children in order: idx, name, pool, lowest, median, spread, volume, age, trend.
+    const badge = dataRow!.children[2]
+    expect(badge).not.toBeNull()
+    expect(badge!.textContent).toBe('DISC')
+    expect(badge!.className).toMatch(/justify-self-start/)
+  })
+})

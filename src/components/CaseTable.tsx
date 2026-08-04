@@ -113,7 +113,11 @@ function CaseRow({ item, idx, selected, onClick, catalyst }: RowProps) {
             )}
           </div>
         </div>
-        <PoolBadge pool={item.pool} />
+        {/* justify-self-start: grid items stretch to fill their cell by
+            default, and unlike the text cells (which never fill their own
+            column width, leaving natural trailing space), this badge WOULD
+            stretch to the full 60px column with zero gap before LOWEST. */}
+        <PoolBadge pool={item.pool} className="justify-self-start" />
         <div
           ref={flashElRef}
           className="t-data-bold text-ink-0 num-flip tabular-nums"
