@@ -54,4 +54,21 @@ describe('AppDashboard workspace canvas (Phase 4.5 Plan 3)', () => {
     expect(chat).not.toBeNull()
     expect(canvas!.contains(chat)).toBe(false)
   })
+
+  // F6 (sticky INSP never pinned): workspace-canvas had no align-items
+  // override, so the flexbox default (stretch) forced LEFT to match
+  // INSP's height whenever INSP's own content was tall, leaving zero
+  // scroll slack for `sticky` to ever visibly pin over. jsdom doesn't
+  // compute real flex layout, so this asserts the class that fixes it
+  // rather than measured heights — see
+  // docs/superpowers/specs/notes/F6-sticky-diagnosis.md for the live
+  // height measurements that diagnosed it.
+  it('workspace-canvas overrides flex stretch so LEFT and INSP size independently (F6)', async () => {
+    const Mod = await import('../App')
+    const { container } = render(<Mod.default />)
+    await new Promise((r) => setTimeout(r, 0))
+    const canvas = container.querySelector('[data-test="workspace-canvas"]')
+    expect(canvas).not.toBeNull()
+    expect(canvas!.className).toMatch(/lg:items-start/)
+  })
 })

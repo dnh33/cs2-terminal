@@ -13,6 +13,7 @@ vi.mock('../hooks/useMarketData', () => ({
     fetching: false, lastUpdated: 1, fetchError: null,
     stats: { last_snapshot_at: 1, cases_tracked: 1, total_cases: 1, total_volume_24h: 0, total_market_cap: 0, last_cron: null },
     fetchAll: vi.fn(), loadDemo: vi.fn(), loadRealHistory: vi.fn(),
+    deepHistory: {}, loadDeepHistory: vi.fn(),
   }),
 }))
 

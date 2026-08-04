@@ -104,12 +104,12 @@ function InspEmptyState({ lastScanAt, onOpenCmdK }: { lastScanAt?: number; onOpe
       <div className="text-[11px] tracking-[0.1em] text-ink-2 tabular-nums">
         {stamp}
       </div>
-      <div className="mt-6 space-y-3 font-serif text-[14px] leading-[1.65] text-ink-1">
+      <div className="mt-6 space-y-3 font-mono text-[12px] tracking-[0.08em] text-ink-1">
         <div>
           <button
             type="button"
             onClick={onOpenCmdK}
-            className="bg-transparent text-ink-1 hover:text-accent-sel cursor-pointer p-0 m-0 font-serif text-[14px]"
+            className="bg-transparent text-ink-1 hover:text-accent-sel cursor-pointer p-0 m-0 font-mono text-[12px] tracking-[0.08em]"
             aria-label="Open command palette to run scan"
           >
             ▸ <kbd className="text-accent-data not-italic">⌘K</kbd> &nbsp; RUN SCAN
@@ -242,7 +242,7 @@ function formatDeltaTable(m7: MoverLite[], m30: MoverLite[], m90: MoverLite[]): 
 }
 
 function AppDashboard({ onLogout }: DashboardProps) {
-  const { items, fetching, lastUpdated, fetchError, stats, fetchAll, loadDemo, loadRealHistory } = useMarketData()
+  const { items, fetching, lastUpdated, fetchError, stats, fetchAll, loadDemo, loadRealHistory, deepHistory, loadDeepHistory } = useMarketData()
   const { entries: hypotheses } = useHypothesisLedger()
   const { entries: catalystEntries } = useCatalystJournal()
 
@@ -408,12 +408,20 @@ function AppDashboard({ onLogout }: DashboardProps) {
 
   const selected = items.find(i => i.id === selectedId)
 
-  // Load real history when a case is selected
+  // Deep (90d) history for the detail panel's own chart + AI prompts — kept
+  // out of item.history so opening a case can't silently rewrite the window
+  // the market table's TREND sparkline reads for that same row (see
+  // useMarketData's loadDeepHistory comment).
+  const selectedDeep = selected && deepHistory[selected.name]
+    ? { ...selected, history: deepHistory[selected.name] }
+    : selected
+
+  // Load deep history when a case is selected
   useEffect(() => {
     if (selected?.name && lastUpdated) {
-      loadRealHistory(selected.name, 90)
+      loadDeepHistory(selected.name, 90)
     }
-  }, [selectedId, lastUpdated, selected?.name, loadRealHistory])
+  }, [selectedId, lastUpdated, selected?.name, loadDeepHistory])
 
   // Load real history for every visible row on data load, not just the
   // selected one — the market table's TREND sparklines were previously stuck
@@ -626,7 +634,7 @@ function AppDashboard({ onLogout }: DashboardProps) {
     }
     setAnalysis('')
     try {
-      const realHistory = (selected.history || []).filter(h => h.source === 'real')
+      const realHistory = (selectedDeep?.history || selected.history || []).filter(h => h.source === 'real')
       const historyBlock = formatHistoryBlock(realHistory)
       const fit = fitResults[selected.id]
       const fitContext = fit && fit.status === 'ok'
@@ -700,7 +708,7 @@ ${historyBlock}`
     setVerdict(null)
     setAnalysis('')
     try {
-      const realHistory = (selected.history || []).filter(h => h.source === 'real')
+      const realHistory = (selectedDeep?.history || selected.history || []).filter(h => h.source === 'real')
       const historyBlock = formatHistoryBlock(realHistory)
       const userMsg = `Argue the OPPOSITE side of your default reasoning on this case.
 If your instinct is LONG, build the AVOID case. If AVOID, build the LONG case.
@@ -1052,10 +1060,15 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
           {/* WORKSPACE CANVAS — Phase 4.5 Plan 3 — outer flex, hairline borders, sticky INSP.
               Sticky containing block is the viewport scroll context (no overflow ancestor),
               so INSP stays visible past the chat region too — releases visually when the
-              page bottom is in view. Practical fit for the synthesis "sticky right-rail" intent. */}
+              page bottom is in view. Practical fit for the synthesis "sticky right-rail" intent.
+              lg:items-start overrides the flex default (stretch): without it, INSP's
+              lg:self-start opt-out only decouples INSP from LEFT, not the reverse — LEFT
+              still stretches to match INSP's height whenever INSP's natural content is
+              tall, forcing both columns equal and leaving zero scroll slack for sticky to
+              ever visibly pin over (see docs/superpowers/specs/notes/F6-sticky-diagnosis.md). */}
           <div
             data-test="workspace-canvas"
-            className="border border-line flex flex-col lg:flex-row"
+            className="border border-line flex flex-col lg:flex-row lg:items-start"
           >
             {/* LEFT: cols 1-8 (~66.67%) — MKT / CHRT / TBL stacked, hairline-divided */}
             <div className="flex-1 min-w-0 lg:border-r lg:border-line">
@@ -1121,7 +1134,7 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
                 {selected ? (
                   <div data-test="detail-panel">
                     <DetailPanel
-                      item={selected}
+                      item={selectedDeep}
                       onAnalyze={analyzeCase}
                       analysis={analysis}
                       analyzing={analyzing}

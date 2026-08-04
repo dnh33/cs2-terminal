@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { CASE_DB, DEMO_PRICES } from '../lib/cases'
 import type { CaseRecord } from '../lib/cases'
 import { computeMetrics, modelPriceHistory } from '../lib/metrics'
+import type { PricePoint } from '../lib/metrics'
 import { fetchLatest, fetchHistory, fetchStats, refreshStale, priceFromLatest } from '../lib/api'
 import type { ItemFull } from '../components/CaseTable'
 import type { MarketStats } from '../lib/api'
@@ -82,6 +83,21 @@ export function useMarketData() {
     } catch { /* non-fatal — keep modeled history */ }
   }, [])
 
+  // Deep (90d) history for whichever case is currently selected in the
+  // detail panel. Kept separate from item.history (mutated by loadRealHistory
+  // above) — that field also backs the market table's TREND sparkline, and
+  // overwriting it with a wider window on selection made the sparkline's
+  // trend/direction silently change the moment a row was clicked, so the
+  // "accurate" version only ever appeared after interacting with the row.
+  const [deepHistory, setDeepHistory] = useState<Record<string, PricePoint[]>>({})
+  const loadDeepHistory = useCallback(async (caseName: string, days = 90) => {
+    try {
+      const points = await fetchHistory(caseName, days)
+      if (points.length < 2) return
+      setDeepHistory(prev => ({ ...prev, [caseName]: points }))
+    } catch { /* non-fatal — detail panel falls back to the row's own history */ }
+  }, [])
+
   // Auto-hydrate on mount: ask the worker if it has any data; if so, pull it
   // immediately so returning users land on the dashboard instead of the
   // Initialize Feed empty state. fetchAll(false) skips the on-demand stale
@@ -127,5 +143,7 @@ export function useMarketData() {
     fetchAll,
     loadDemo,
     loadRealHistory,
+    deepHistory,
+    loadDeepHistory,
   }
 }
