@@ -111,9 +111,9 @@ function MoverList({
               onActivate={() => onSelect(r.id)}
               selected={false}
               aria-label={`${r.name}, ${r.pct_change > 0 ? 'up' : 'down'} ${Math.abs(r.pct_change).toFixed(1)} percent, $${r.last_price.toFixed(2)}`}
-              className="flex items-center justify-between px-4 py-2 border-b border-line hover:bg-white/[0.02] cursor-pointer"
+              className="flex items-center px-4 py-2 border-b border-line hover:bg-white/[0.02] cursor-pointer"
             >
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <PoolBadge pool={r.pool} />
                 <div className="min-w-0">
                   <div className="text-[12px] text-ink-0 truncate">{r.name}</div>
@@ -122,16 +122,22 @@ function MoverList({
                   </div>
                 </div>
               </div>
-              <div
-                className="text-[10px] tabular-nums shrink-0 mr-2 text-right"
-                data-testid="mover-row-volume"
-                style={{ color: volColor }}
-              >
-                {hasVol ? <NumberFlip value={vol!} formatter={(n) => n.toLocaleString('en-US')} /> : '—'}
-                <div className="text-[8px] text-ink-3 tracking-[0.15em] uppercase">vol/24h</div>
-              </div>
-              <div className="font-display text-[18px] shrink-0" style={{ color: accent }}>
-                {r.pct_change > 0 ? '+' : ''}<NumberFlip value={r.pct_change} suffix="%" decimals={1} />
+              {/* Volume + pct are a paired stat cluster — grouped in one flex
+                  container so they sit next to each other on the right edge,
+                  rather than justify-between spreading all three row children
+                  evenly and stranding a gap between them. */}
+              <div className="flex items-center gap-3 shrink-0">
+                <div
+                  className="text-[10px] tabular-nums shrink-0 text-right"
+                  data-testid="mover-row-volume"
+                  style={{ color: volColor }}
+                >
+                  {hasVol ? <NumberFlip value={vol!} formatter={(n) => n.toLocaleString('en-US')} /> : '—'}
+                  <div className="text-[8px] text-ink-3 tracking-[0.15em] uppercase">vol/24h</div>
+                </div>
+                <div className="font-display text-[18px] shrink-0 text-right" style={{ color: accent }}>
+                  {r.pct_change > 0 ? '+' : ''}<NumberFlip value={r.pct_change} suffix="%" decimals={1} />
+                </div>
               </div>
             </KbdRow>
           )
