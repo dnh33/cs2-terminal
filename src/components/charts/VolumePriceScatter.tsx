@@ -177,28 +177,59 @@ export function VolumePriceScatter({ items, onSelect, selectedId }: ScatterProps
             />
           ))}
 
-          {/* 5. persistent labels for top-5 + selected — RHS-truncation flip.
-                Suppress label for the currently hovered item to avoid duplicate
-                name rendering (tooltip shows it). Also suppress when only one
-                point exists — a sole label is visual noise and collides with
-                tooltip text in test queries. */}
-          {(data.length > 1 ? data.filter(d => (topIds.has(d.id) || d.id === selectedId) && d.id !== hover?.id) : []).map(d => {
-            const px = xPx(d.vol), py = yPx(d.price)
-            const labelText = d.name.slice(0, 12)
-            // Approx 6px per char in 9px JetBrains Mono
-            const labelW = labelText.length * 6
-            const wouldClipRight = px + 10 + labelW > W - PAD_R
-            return (
-              <text key={`label-${d.id}`}
-                x={wouldClipRight ? px - 10 : px + 10}
-                y={py + 4}
-                fontSize={9} fill="var(--ink-2)"
-                textAnchor={wouldClipRight ? 'end' : 'start'}
-                data-persistent-label="" fontFamily={'"JetBrains Mono", monospace'}>
-                {labelText}
-              </text>
-            )
-          })}
+          {/* 5. persistent labels for top-5 + selected — RHS-truncation flip,
+                plus vertical decluttering. Suppress label for the currently
+                hovered item to avoid duplicate name rendering (tooltip shows
+                it). Also suppress when only one point exists — a sole label
+                is visual noise and collides with tooltip text in test queries. */}
+          {(() => {
+            if (data.length <= 1) return null
+            const candidates = data.filter(d => (topIds.has(d.id) || d.id === selectedId) && d.id !== hover?.id)
+            // High-volume cases cluster tightly in price×volume space, so their
+            // labels land on top of each other (the literal "hard to read" bug).
+            // Declutter vertically: sort by y, push overlapping labels down.
+            const LABEL_H = 11
+            const positioned = candidates
+              .map(d => {
+                const px = xPx(d.vol), py = yPx(d.price)
+                const labelText = d.name.slice(0, 12)
+                const labelW = labelText.length * 6 // approx 6px/char in 9px JetBrains Mono
+                const wouldClipRight = px + 10 + labelW > W - PAD_R
+                return { d, px, py, labelText, wouldClipRight }
+              })
+              .sort((a, b) => a.py - b.py)
+
+            let prevY = -Infinity
+            const withDeclutteredY = positioned.map(p => {
+              const y = Math.max(p.py, prevY + LABEL_H)
+              prevY = y
+              return { ...p, y }
+            })
+
+            // Siblings, not a <g> wrapper — the layering test looks for
+            // data-persistent-label on a direct child of the svg.
+            return withDeclutteredY.flatMap(({ d, px, py, y, labelText, wouldClipRight }) => {
+              const nodes = []
+              if (Math.abs(y - py) > 2) {
+                nodes.push(
+                  <line key={`leader-${d.id}`}
+                    x1={px} y1={py} x2={wouldClipRight ? px - 8 : px + 8} y2={y}
+                    stroke="var(--ink-3)" strokeWidth={0.5} />,
+                )
+              }
+              nodes.push(
+                <text key={`label-${d.id}`}
+                  x={wouldClipRight ? px - 10 : px + 10}
+                  y={y + 4}
+                  fontSize={9} fill="var(--ink-2)"
+                  textAnchor={wouldClipRight ? 'end' : 'start'}
+                  data-persistent-label="" fontFamily={'"JetBrains Mono", monospace'}>
+                  {labelText}
+                </text>,
+              )
+              return nodes
+            })
+          })()}
         </svg>
 
         {hover && (() => {
