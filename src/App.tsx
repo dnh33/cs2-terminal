@@ -1133,7 +1133,18 @@ When citing momentum, trends, or "movers", use ONLY the % change windows table b
               <div className="flex-1 min-w-0">
                 {selected ? (
                   <div data-test="detail-panel">
+                    {/* key={selected.id}: DetailPanel is never unmounted between
+                        two different cases (only the null <-> selected branch
+                        unmounts it), so every NumberFlip inside it — lowest
+                        ask, median, volume, break-even, FIT score — saw the
+                        old case's value as "previous" and the new case's
+                        value as "changed", flipping/flashing on open even
+                        though nothing actually changed, it's just a different
+                        instrument. Keying on the case id forces a clean
+                        remount on selection while still letting live price
+                        ticks animate normally while viewing the same case. */}
                     <DetailPanel
+                      key={selected.id}
                       item={selectedDeep}
                       onAnalyze={analyzeCase}
                       analysis={analysis}
