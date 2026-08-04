@@ -27,9 +27,12 @@ function StatBlock({
   dominant?: boolean
   dataTest?: string
 }) {
-  // Phase 4.5 Plan 1 — dominant doubles flex-basis and bumps numeral size for
-  // the HERO STRIP 24H DOLLAR VOLUME block.
-  const flexClass = dominant ? 'flex-[2] min-w-[280px]' : 'flex-1 min-w-[140px]'
+  // Phase 4.5 Plan 1 — dominant bumps numeral size for the HERO STRIP 24H
+  // DOLLAR VOLUME block. flex-[2] (2x box width) was tried first but left a
+  // large dead-space gap after the short numeral value — the doubled WIDTH
+  // wasn't earning its keep, only the doubled FONT SIZE was. Same flex-grow
+  // as satellites now; a wider min-width still gives the 44px numerals room.
+  const flexClass = dominant ? 'flex-1 min-w-[280px]' : 'flex-1 min-w-[140px]'
   const numClass = dominant ? 'text-[44px]' : 'text-[28px]'
   return (
     <div data-test={dataTest} className={`px-4 py-3.5 border-r border-line ${flexClass}`}>
@@ -106,10 +109,11 @@ export function MarketStats({ items, topMover }: { items: ItemWithPrice[]; topMo
     )
   }
 
-  // Phase 5+ TODO: when worker exposes total_market_cap_24h_ago, compute
-  // dvol24hPctChange and replace the "—" placeholder. Plan 1 ships the slot;
-  // Phase 5 fills it.
-  const delta24hPlaceholder = 'Δ24H · —'
+  // Phase 5+ TODO: when worker exposes total_market_cap_24h_ago, compute a
+  // real dvol24hPctChange and add it back as `sub`. A "Δ24H · —" placeholder
+  // shipped in Plan 1 to reserve the slot, but a permanently-empty numeric
+  // field reads as broken rather than "coming soon" — better to show nothing
+  // than a dash where a number is expected.
 
   return (
     <div className="border-b border-line bg-bg-1 flex flex-wrap">
@@ -119,7 +123,6 @@ export function MarketStats({ items, topMover }: { items: ItemWithPrice[]; topMo
         dataTest="hero-dominant"
         label="24H DOLLAR VOLUME"
         value={<NumberFlip value={stats.totalCap} formatter={(n) => `$${(n / 1000).toFixed(1)}K`} />}
-        sub={<span className="tabular-nums tracking-[0.1em]">{delta24hPlaceholder}</span>}
         accent="var(--accent-data)"
       />
       {/* SATELLITE 1 — BIGGEST MOVER 24H */}

@@ -63,11 +63,19 @@ describe('MarketStats HERO STRIP (Phase 4.5 Plan 1)', () => {
     expect(screen.queryByText('24H VOLUME')).toBeNull()
   })
 
-  it('renders Δ24h placeholder slot under the dominant block', () => {
+  it('does NOT render a Δ24h placeholder — an empty numeric slot reads as broken, not "coming soon"', () => {
     const { container } = render(<MarketStats items={[priced]} topMover={topMover} />)
     const dominant = container.querySelector('[data-test="hero-dominant"]')
     expect(dominant).not.toBeNull()
-    expect(dominant!.textContent).toMatch(/Δ24H · —/)
+    expect(dominant!.textContent).not.toMatch(/Δ24H/)
+  })
+
+  it('gives the dominant block the same flex-grow as satellites (no dead-space gap)', () => {
+    const { container } = render(<MarketStats items={[priced]} topMover={topMover} />)
+    const dominant = container.querySelector('[data-test="hero-dominant"]')
+    expect(dominant).not.toBeNull()
+    expect(dominant!.className).toMatch(/flex-1/)
+    expect(dominant!.className).not.toMatch(/flex-\[2\]/)
   })
 
   it('renders BIGGEST MOVER skeleton when topMover is undefined (loading)', () => {
