@@ -4,7 +4,7 @@ A Bloomberg-style market intelligence terminal for CS2 cases. Tracks ~40 cases a
 
 **Stack:** React 19 + TypeScript + Vite + Tailwind 3 frontend on Netlify. Cloudflare Worker with D1 SQLite database for the data layer. Cron trigger sweeps Steam Market hourly; on-demand refresh covers any case staler than 10 min.
 
-> **Prefer dashboard clicks over CLI?** See [DASHBOARD_DEPLOY.md](./DASHBOARD_DEPLOY.md) for a drag-and-drop deployment path. You'll run one local build command, then everything else is browser-based.
+> **Prefer dashboard clicks over CLI?** See [DEPLOY_DASHBOARD.md](./DEPLOY_DASHBOARD.md) for a drag-and-drop deployment path. You'll run one local build command, then everything else is browser-based.
 
 ## Architecture
 

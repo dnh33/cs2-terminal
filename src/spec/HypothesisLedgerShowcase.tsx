@@ -2,10 +2,8 @@
  * Phase 4 Plan 1 — Hypothesis Ledger Spec Showcase
  *
  * Public route at /spec/hypothesis-ledger. Standalone preview of the
- * locked spec, rendered with the actual case-sniper design system tokens.
+ * locked spec, rendered with the app's actual design system tokens.
  * Mock data only; no localStorage writes, no /history fetches.
- *
- * Spec source: docs/superpowers/specs/2026-05-07-case-sniper-phase-4-plan-1-hypothesis-ledger-design.md
  */
 import { useEffect, useId, useState } from 'react'
 import { PaletteSwitch } from '../components/primitives/PaletteSwitch'
@@ -878,15 +876,13 @@ function Footer() {
       <div className="max-w-[1100px] mx-auto text-[11px] text-ink-3 font-mono leading-relaxed">
         <div className="text-[10px] tracking-[0.3em] text-accent-sel font-bold mb-3">// META</div>
         <div className="grid grid-cols-2 gap-x-12 gap-y-1">
-          <div>spec · docs/superpowers/specs/2026-05-07-case-sniper-phase-4-plan-1-hypothesis-ledger-design.md</div>
-          <div>plan source · 06-projects\case-sniper-phase-4-plan.md</div>
           <div>commit · 0386732</div>
           <div>tag (planned) · phase-4-plan-1-hypothesis-ledger</div>
           <div>files in scope · src/lib/useHypothesisLedger.ts · src/lib/resolveHypothesis.ts · src/components/HypothesisLedger.tsx</div>
           <div>integrations · src/App.tsx (AppDashboard) · src/components/DetailPanel.tsx · src/components/CmdK.tsx</div>
         </div>
         <div className="mt-6 text-ink-3">
-          // next: <span className="text-ink-1">Daniel reviews this preview, then /writing-plans generates the atomic TDD plan from spec.</span>
+          // next: <span className="text-ink-1">spec reviewed against this preview, then the atomic TDD plan is generated from it.</span>
         </div>
       </div>
     </footer>

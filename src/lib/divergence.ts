@@ -4,9 +4,7 @@
 // Mirrors the contract guarantees of `fitScore.ts`: deterministic,
 // idempotent, identical inputs → identical outputs.
 //
-// Spec sources:
-//   - docs/superpowers/specs/2026-05-05-case-sniper-phase-2-workflow.md §2.5
-//   - 06-projects\case-sniper-fit-framework.md §"Verdict-FIT divergence policy"
+// See project design docs for the full "Verdict-FIT divergence policy" spec.
 //
 // Locked rules (DO NOT silently change — these have UI contracts):
 //   - divergence = |verdictImplied - fit.fit|

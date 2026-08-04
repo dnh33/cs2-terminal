@@ -37,8 +37,8 @@ OPENROUTER_EMBEDDING_MODEL = "openai/text-embedding-3-small"
 
 # Optional attribution — shows your app on https://openrouter.ai/rankings
 # Set OPENROUTER_APP_URL to your deployed Netlify URL after first deploy.
-OPENROUTER_APP_NAME = "Case Sniper"
-OPENROUTER_APP_URL = "https://your-site.netlify.app"
+OPENROUTER_APP_NAME = "CS2 Case Terminal"
+OPENROUTER_APP_URL = ""
 
 # D1 database. Create with:
 #   wrangler d1 create cs2-prices

@@ -1,6 +1,6 @@
 {
-  "name": "case-sniper",
-  "private": true,
+  "name": "cs2-terminal",
+  "description": "Bloomberg-style market intelligence terminal for CS2 cases: React 19 frontend, Cloudflare Worker + D1 backend, LLM-native analyst chat via OpenRouter.",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
