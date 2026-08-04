@@ -39,28 +39,40 @@ export interface PoolIndexSeries {
 
 const MIN_COVERAGE = 3
 
+const DAY_SECONDS = 86400
+
 export function computePoolIndexSeries(rows: SnapshotRow[]): PoolIndexSeries {
-  // Group by (snapshot_at, pool) → accumulate (num, denom, contributors)
-  const buckets = new Map<string, { num: number; denom: number; contributors: number }>()
+  // Group by (day, pool) → accumulate (num, denom, contributors). Bucketing
+  // by exact fetched_at previously produced 600-700+ raw points per line
+  // over a 30-day window (cron runs hourly + 3-hourly + twice-daily), which
+  // is why the chart looked like noise. Bucketing by day matches the F11
+  // history-dedup fix's granularity.
+  //
+  // contributors is a Set of case_id, not a row count: a single case
+  // reporting 24x/day must still count as ONE contributor, otherwise
+  // MIN_COVERAGE (meant to require ≥3 distinct cases) would pass on
+  // volume from a single case's repeated snapshots.
+  const buckets = new Map<string, { num: number; denom: number; contributors: Set<string> }>()
   for (const row of rows) {
     if (row.lowest === null) continue
     // Treat NULL volume the same as null lowest: skip BEFORE arithmetic so
     // NaN never enters num/denom and contributors count stays accurate.
     if (row.volume === null) continue
-    const key = `${row.fetched_at}|${row.pool}`
+    const dayBucket = Math.floor(row.fetched_at / DAY_SECONDS) * DAY_SECONDS
+    const key = `${dayBucket}|${row.pool}`
     let bucket = buckets.get(key)
     if (!bucket) {
-      bucket = { num: 0, denom: 0, contributors: 0 }
+      bucket = { num: 0, denom: 0, contributors: new Set() }
       buckets.set(key, bucket)
     }
     bucket.num += row.lowest * row.volume
     bucket.denom += row.volume
-    if (row.volume > 0) bucket.contributors += 1
+    if (row.volume > 0) bucket.contributors.add(row.case_id)
   }
 
   const out: PoolIndexSeries = { DISCONTINUED: [], RARE: [], ACTIVE: [] }
   for (const [key, bucket] of buckets) {
-    if (bucket.contributors < MIN_COVERAGE) continue
+    if (bucket.contributors.size < MIN_COVERAGE) continue
     if (bucket.denom === 0) continue
     const [tStr, poolRaw] = key.split('|')
     const poolKey = POOL_KEY_MAP[poolRaw as SnapshotRow['pool']]
@@ -68,7 +80,7 @@ export function computePoolIndexSeries(rows: SnapshotRow[]): PoolIndexSeries {
     out[poolKey].push({
       snapshot_at: Number(tStr),
       vwap: bucket.num / bucket.denom,
-      contributors: bucket.contributors,
+      contributors: bucket.contributors.size,
     })
   }
   // Sort each series by snapshot_at ascending
