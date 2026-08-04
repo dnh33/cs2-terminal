@@ -83,6 +83,14 @@ export const PriceChart = forwardRef<LWChartRef, { item: ItemFull }>(function Pr
       <div className="mt-2 text-[10px] tracking-[0.15em] text-ink-3 font-mono">
         {caption}
       </div>
+      {/* The chart's dashed price line abbreviates to "BE" (axis space is
+          tight) — spell it out here so it isn't a cryptic unlabeled line. */}
+      {item.metrics?.breakeven != null && (
+        <div className="flex items-center gap-1.5 mt-1 text-[10px] tracking-[0.1em] text-ink-2 font-mono">
+          <span className="inline-block w-2.5 border-t border-dashed" style={{ borderColor: 'var(--accent-data)' }} />
+          BE = BREAKEVEN ${item.metrics.breakeven.toFixed(2)}
+        </div>
+      )}
     </>
   )
 })
